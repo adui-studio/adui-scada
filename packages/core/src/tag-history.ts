@@ -250,16 +250,16 @@ export type TagHistorySamplingDecision =
  * 基线以成功进入内存缓冲区的记录为准，不表示已经持久化。
  */
 export class TagHistorySampler {
+  private readonly buffer: TagHistoryBuffer;
+  private readonly tagId: string;
   private readonly intervalMs: number;
   private readonly numericDeadband: number | undefined;
   private lastRecorded: TagHistoryPoint | undefined;
   private lastSeenMs: number | undefined;
 
-  constructor(
-    private readonly buffer: TagHistoryBuffer,
-    private readonly tagId: string,
-    policy: TagHistorySamplingPolicy,
-  ) {
+  constructor(buffer: TagHistoryBuffer, tagId: string, policy: TagHistorySamplingPolicy) {
+    this.buffer = buffer;
+    this.tagId = tagId;
     if (typeof tagId !== "string" || !TAG_ID_PATTERN.test(tagId)) {
       throw new TypeError("历史采样 Tag ID 无效");
     }

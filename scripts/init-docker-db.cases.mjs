@@ -1,10 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import {
-  createDockerDatabaseUrl,
-  createDockerPrismaEnvironment,
-  resolveDockerPrismaAction,
-} from "./init-docker-db.mjs";
+import { createDockerDatabaseUrl, createDockerPrismaEnvironment } from "./init-docker-db.mjs";
 import { makeLabSecrets } from "./prepare-oidc-lab.mjs";
 
 const env =
@@ -25,7 +21,7 @@ const secrets =
     .map(([name, value]) => `${name}=${value}`)
     .join("\n") + "\n";
 
-void describe("本机 Docker 首次 Prisma 迁移连接保护", () => {
+void describe("本机 Docker 原生数据库连接保护", () => {
   void it("只生成新的本机 adui_scada 连接地址", () => {
     const url = new URL(createDockerDatabaseUrl(env, secrets));
     assert.equal(url.hostname, "127.0.0.1");
@@ -64,14 +60,6 @@ void describe("本机 Docker 首次 Prisma 迁移连接保护", () => {
     const url = new URL(createDockerDatabaseUrl(env, secrets));
     assert.deepEqual([...url.searchParams.keys()], ["schema"]);
     assert.equal(url.searchParams.has("password"), false);
-  });
-
-  void it("Docker 状态查询只允许固定的只读 Prisma 命令", () => {
-    assert.equal(resolveDockerPrismaAction([]), "deploy");
-    assert.equal(resolveDockerPrismaAction(["--status"]), "status");
-    for (const args of [["--reset"], ["--status", "--force"], ["migrate", "dev"]]) {
-      assert.throws(() => resolveDockerPrismaAction(args), /仅支持迁移部署或只读状态查询/);
-    }
   });
 
   void it("状态查询使用 Docker 随机密码覆盖过期的根环境变量", () => {

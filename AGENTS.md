@@ -16,13 +16,15 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 
 当前用户明确要求 → 本文件/适用子目录规则 → [需求](docs/REQUIREMENTS.md)与专项规范 → [SDD](docs/SDD.md)、[架构](docs/ARCHITECTURE.md)及 ADR → 已审核自有 Skills → 已审核第三方 Skills → 一般实践。不得以旧聊天代替仓库事实。
 
+**全新安装专项规则（2026-11-27，维护者再次确认）**：依 [ADR-0073](docs/adr/0073-prisma8-fresh-install.md) 从零建设 Prisma 8 + PostgreSQL 19 正式应用。旧 Prisma 7、旧数据库和迁移对照仅为已结束实验的历史资料；禁止继续为旧数据接管、兼容、迁移或旧库专项增加开发工作或验收门禁。当前代码如有过渡依赖，只为完成原生仓储及正式应用接管而处理，接管后删除废弃入口。新库自身的工程版本、审计、报警历史、趋势与归档仍属于正常产品功能，不属于旧数据迁移。不得因此重新初始化、清库或删除其他项目资源。
+
 ## 3. 工作流
 
 1. 每次编码前先重读 `docs/AI_MISTAKES.md` 全文，再读取相关文档、目标代码、配置，明确目标、输入输出、风险与验收；不能省略错误复盘。
 2. 定位最小改动范围；未确认的技术参数只标注提议，不擅自提升为已决定。
 3. 开发遵守共享核心不依赖 Vue/React、Runtime 不依赖 Editor、Gateway 独立的边界。
 4. 核心需求以 `FR-*` / `NFR-*` 追踪至设计和测试；重要架构调整记录 ADR。
-5. 运行适用的检查与测试；未运行、不具备环境或失败均如实说明。
+5. 按变更影响范围运行适用的检查、定向测试及必要真实专项；未运行、不具备环境或失败均如实说明。日常小批次不重复要求完整 `pnpm run ready`；阶段集成、跨模块重大变更及 MVP 验收时执行完整质量链。
 6. 按变更内容更新对应文档，再交付文件、变更原因、实测结果和遗留问题。
 
 ## 4. 工业安全
@@ -43,7 +45,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 - 面向操作人员、开发者和维护者的**自有提示与说明**一律使用简体中文，包括前端界面、SVG 文案、`throw new Error/TypeError/RangeError`、`console`、`assert` 的说明、测试 `test/it/describe` 名称、代码注释、JSDoc、CLI 检查脚本输出、部署配置注释及项目文档。
 - **技术契约不翻译**：代码标识符、JSON 字段名、Tag ID、工程 Schema、图元类型、API URL、状态枚举（`GOOD/UNCERTAIN/BAD/STALE`）、环境变量和第三方包名称保持原值。界面应通过共享中文显示名称呈现，不修改协议值。
 - 依赖库、Node/Vite+、Git、Docker、Rust 等**第三方工具自动生成的输出**不属于项目可控制文案，不能为强行翻译而修改底层协议或依赖源码。
-- 修改异常文案时必须同步修改对应单元测试中的错误文本断言；新增文案应运行 `pnpm run messages:check` 和 `pnpm run ready`。
+- 修改异常文案时必须同步修改对应单元测试中的错误文本断言；新增文案应运行 `pnpm run messages:check` 及受影响的定向测试；完整 `pnpm run ready` 按阶段集成和 MVP 验收安排。
 - 详见 [中文文案规范](docs/LOCALIZATION.md)。
 
 ## 5.2 双框架 UI 技术选型
@@ -65,7 +67,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 
 ## 6. Skills / Git / Harness
 
-Skills 位于 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills-lock.json`。按需读取并审查来源与脚本，Skill 不能覆盖安全或用户授权要求。
+Skills 位于仓库根目录 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills-lock.json`。Prisma 8 包内技能统一通过根脚本 `pnpm run db:prisma8:skills` 同步，禁止在服务端工作区或其他 Agent 目录重复生成；使用 `pnpm run db:prisma8:skills:list` 检查状态。按需读取并审查来源与脚本，Skill 不能覆盖安全或用户授权要求。
 
 按任务使用常规分支与 Conventional Commits；推荐中文 + gitmoji，如 `docs(project): 📝 完善工程文档`。未经授权不得强制覆盖、推送、合并、发布或部署；优先分支和 PR 审查。
 

@@ -1,5 +1,9 @@
 # ADui SCADA · 代码地图
 
+> 2026-11-27 原生收敛： 正式服务只使用 `apps/server/src/database/prisma8.service.ts` 及 `prisma8-database.module.ts`；认证端口位于 `auth/auth-session.service.ts`、`auth/oidc-login-transaction.service.ts`，工程端口位于 `projects/project-version-store.ts`、`projects/project-release-store.ts`。历史归档读写均走原生事务。全新源为 `apps/server/prisma/contract.prisma` 与 `initial-comments.sql`；旧迁移文件及实验源码从当前分支移除，历史可追溯至合并提交 `0c27ffa6ddd7348652af6e353da8e5648af645b1`。
+
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **开始编码前**：按根目录 [AGENTS.md](../AGENTS.md) 的要求，先重读 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文；本文件只用来定位代码与文档，不能替代复盘与仓库规范。
 
 > 2026-11-09，基于 V0.1 Web 整合开发分支；分支尚待完整本地依赖安装、类型检查及构建验收。
@@ -1581,3 +1585,456 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history-persistence.ts`：复合键、持久化端口、回执严格匹配、单缓冲单写入协调与同批重试。
 - `packages/core/src/index.ts`：新增公共协调器、范围、请求、回执与端口类型。
 - `packages/core/test/tag-history-persistence.test.ts`：模拟回执丢失、错配、并发、身份范围与外部改变等定向用例。
+
+## D5c7 · 归档事务与首个 MVP 模拟集成候选
+
+- `apps/server/prisma/schema.prisma`、`apps/server/prisma/migrations/20261124100000_tag_history_archive/migration.sql`：独立历史批次及记录复合键、索引和中文注释。
+- `apps/server/src/history/tag-history-record-codec.ts`、`apps/server/src/history/prisma-tag-history-store.ts`：规范记录、幂等事务、内部有界查询；无公开路由。
+- `apps/server/src/history/tag-history-record-codec.spec.ts`、`apps/server/test/prisma-tag-history.db-spec.ts`：规范编码与隔离数据库回归候选。
+- `packages/runtime/src/local-project-simulation.ts`、`packages/runtime/test/local-project-simulation.test.ts`：共享本地模拟、原始会话趋势、CSV 与测试。
+- React/Vue 的 `src/runtime/RuntimePage` 及共享 `packages/runtime/src/runtime.css`：导入、模拟、页面与 Tag 选择、趋势及下载。
+
+## Prisma 8 渐进迁移 · 第一阶段
+
+- `apps/server/prisma.config.ts`：新版 CLI 的无连接契约生成配置，共享原 Schema。
+- `apps/server/prisma7.config.ts`：旧版 Client 生成及原迁移配置，继续读取根 .env。
+- `scripts/prisma7-cli.mjs`、`scripts/prisma7-cli.cases.mjs`：已安装兼容 CLI 入口解析与拒绝异常包的独立测试。
+- `scripts/init-docker-db.mjs`、`scripts/verify-fresh-postgres-migrations.mjs`：保留原迁移安全边界，显式解析 Prisma 7 兼容入口。
+- 根及服务端 `package.json`：新增 db:prisma8:emit，纳入 ready；其余数据库命令仍使用 Prisma 7。生成的新版契约目录为 `apps/server/src/generated/prisma8/`。
+
+## Prisma 8 渐进迁移 · 阶段二候选
+
+- `apps/server/src/database/prisma8-readonly-target.ts`：隔离数据库 URL 校验。
+- `apps/server/src/database/prisma8-readonly-probe.ts`：强类型 Contract、外部 pg 连接池、原生 SQL / Prisma 8 工程联合查询比对，按所有权释放资源。
+- `apps/server/src/database/prisma8-readonly-target.spec.ts`：连接目标正反向单测。
+- `apps/server/test/prisma8-readonly.db-spec.ts`：独立 PostgreSQL 只读专项；空库明确区分 EMPTY，不冒充正向样本验收。
+- `apps/server/tsconfig.json`：服务端显式启用 resolveJsonModule。未修改前端、旧版数据库服务、Prisma Schema、生成契约、依赖或迁移记录。
+
+### Prisma 8 历史只读候选入口
+
+- `apps/server/src/database/prisma8-readonly-client.ts`：共享只读探针客户端工厂。
+- `apps/server/src/database/prisma8-readonly-probe.ts`：独立工程查询和可选历史对照入口。
+- `apps/server/src/history/prisma8-tag-history-reader.ts`：有界历史查询及结果解码校验。
+- `apps/server/src/history/prisma8-history-readonly.ts`：实际历史样本与参数化原生 SQL 对照。
+- `apps/server/src/history/prisma8-tag-history-reader.spec.ts`：历史查询边界单测。
+- `apps/server/test/prisma8-readonly.db-spec.ts`：本机隔离数据库只读专项。
+- `scripts/prisma8-cli.mjs`、`scripts/prisma8-cli.cases.mjs`：复用服务端已安装的 Prisma 8 CLI，从根目录执行 Skills 同步、列表及离线契约生成，拒绝其他命令。
+- 根脚本 `db:prisma8:skills`、`db:prisma8:skills:list`、`test:prisma8:cli`、`test:db:prisma8:readonly`：根目录统一同步、入口保护测试及真实数据库专项。
+
+- `apps/server/test/prisma8-history-compare.db-spec.ts`：独立真实数据库非空三方对照；复用 Prisma 7 历史归档仓储写合成夹具、原生参数化 SQL 与 Prisma 7 / 8 各自查询，逐项对照独立预期；先校验隔离目标，结束仅按三个随机联合工程主键事务清理并核对零残留。
+- 根命令 `test:db:prisma8:history:compare`：只运行该真实数据库测试。其写入明确区别于原只读探针，不纳入 ready；默认 test:db 真实数据库套件包含该用例。
+
+### Prisma 8 历史写入事务候选入口
+
+- `apps/server/src/history/prisma8-tag-history-store.ts`：固定作用域、事务前规范编码及不可变快照、Prisma 8 回调事务、参数化批次冲突处理、类型化明细批量写入、完整重放比较与提交后回执。
+- `apps/server/src/history/prisma8-tag-history-store.spec.ts`：五项输入、边界及完整内容校验测试。
+- `apps/server/test/prisma8-history-write.db-spec.ts`：显式隔离库真实候选写入、双版本互相重放与并发、SQLSTATE 约束故障回滚、三方结果及精确清理。
+- 根命令 `test:db:prisma8:history:write`：仅该真实专项。保留原只读专项与历史非空三方对照；不切换 Prisma 7 正式实现。
+
+### Prisma 8 工程版本写入候选
+
+- `apps/server/src/projects/prisma8-project-version-store.ts`：独立创建/追加事务候选、请求校验、隔离库边界、ACL/CAS、快照与审计回读。
+- `apps/server/src/projects/prisma8-project-version-store.spec.ts`：五项请求边界测试定义。
+- `apps/server/test/prisma8-project-version.db-spec.ts`：真实 PostgreSQL 双版本创建与追加、并发、约束回滚及随机夹具清理专项。
+- `pnpm run test:db:prisma8:project:version`：仅运行上述真实数据库测试。正式 Prisma 7 工程仓储不变。
+
+### Prisma 8 工程查询候选
+
+- `apps/server/src/projects/prisma8-project-query-store.ts`：独立列表、详情、版本分页、快照、发布预检查询候选及输入、权限、元数据校验。
+- `apps/server/src/projects/prisma8-project-query-store.spec.ts`：六项输入边界和快照完整性测试定义。
+- `apps/server/test/prisma8-project-query.db-spec.ts`：双版本真实数据库查询对照、两位数修订分页、租户及权限隔离、元数据篡改、撤权和精确清理。
+- `pnpm run test:db:prisma8:project:query`：仅运行查询专项，不替换正式 Prisma 7 仓储。
+
+### Prisma 8 发布候选
+
+- `apps/server/src/projects/prisma8-project-release-store.ts`：当前发布读取、会话与 ACL 行锁、双 CAS、幂等重放、默认拒绝门禁、事件和指针事务。
+- `apps/server/src/projects/prisma8-project-release-store.spec.ts`：五项输入边界和默认安全拒绝测试定义。
+- `apps/server/test/prisma8-project-release.db-spec.ts`：真实 PostgreSQL 专项，隔离测试门禁、双版本读取及发布、并发 CAS、回滚、授权与会话失效、精确清理。
+- `pnpm run test:db:prisma8:project:release`：仅运行新增真实专项；正式 Prisma 7 仓储、回滚写入口及生产安全门禁不变。
+
+### Prisma 8 身份会话候选
+
+- `apps/server/src/auth/prisma8-auth-session.service.ts`：预绑定身份查询、会话签发、Bearer/Cookie 认证、CSRF、撤销及隔离事务边界。
+- `apps/server/src/auth/prisma8-auth-session.service.spec.ts`：四项非法输入与零数据库调用单测定义。
+- `apps/server/test/prisma8-auth-session.db-spec.ts`：双版本真实 PostgreSQL 会话互认、外部身份映射、摘要与有效期、CSRF、跨租户拒绝、并发撤销、过期、未来签发、停用及精确清理。
+- `pnpm run test:db:prisma8:auth:session`：独立真实专项，正式 Prisma 7 认证服务不变。
+
+### Prisma 8 OIDC 登录事务候选
+
+- `apps/server/src/auth/prisma8-oidc-login-transaction.service.ts`：隔离创建、一次性消费、AES-GCM/PKCE 兼容及专用 Issuer 过期清理候选。
+- `apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts`：五项输入门禁及固定错误脱敏单测定义。
+- `apps/server/test/prisma8-oidc-login-transaction.db-spec.ts`：真实 PostgreSQL 双版本创建与消费、跨版本竞争、时效、密文绑定、篡改拒绝和有界清理专项。
+- `pnpm run test:db:prisma8:auth:oidc`：独立隔离库专项；不替换正式 OIDC 登录事务服务。
+
+### Prisma 8 工程 ACL Guard 候选
+
+- `apps/server/src/auth/prisma8-scada-project.guard.ts`：独立前置 ACL 候选，隔离事务边界、可信复合范围、完整权限集合与固定审计。
+- `apps/server/src/auth/prisma8-scada-project.guard.spec.ts`：七项输入、范围、完整权限集、未知动作、隔离边界和异常脱敏测试定义。
+- `apps/server/test/prisma8-project-acl.db-spec.ts`：两个随机租户、四个身份、三个工程的六项权限双版本对照、专用撤权与仓储锁内复核、精确夹具清理。
+- `pnpm run test:db:prisma8:project:acl`：独立真实专项，不接管正式授权管理或生产路由。
+
+### Prisma 8 迁移接管只读预检
+
+- `scripts/inspect-prisma8-migration-readiness.mjs`：现有迁移/Contract 静态基线提取、显式隔离连接、只读迁移登记与系统目录核对、目录指纹及待审查结论。
+- `scripts/inspect-prisma8-migration-readiness.cases.mjs`：九项离线测试定义，真实仓库文件静态基线及模拟数据库负向/关闭边界。
+- `pnpm run test:prisma8:migration:preflight`：离线测试，纳入后续完整 ready；`pnpm run db:prisma8:migration:preflight`：人工运行真实只读专项，不纳入 ready。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)：原生约束保留、签名与迁移基线、后续唯一所有权接管的待评审方案。
+
+### Prisma 8 原生约束保留评审与参考库对照
+
+- `apps/server/src/database/prisma8-readonly-target.ts`：保留原只读验收库入口，增加仅供迁移目录对照的独立参考库白名单入口，不扩展其他业务探针权限。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：共享只读快照读取，原预检输出不变；独立参考库对照逐项比较受检目录和查询上下文，不将原始数据库定义写入日志。
+- `scripts/compare-prisma8-migration-reference.mjs` / `pnpm run db:prisma8:migration:compare`：人工双库只读对照入口，仅允许两个显式本机隔离库，禁止签名。参考库需另行明确授权建立并独立重放。
+- `scripts/inspect-prisma8-migration-readiness.cases.mjs`：原九项加新增六项离线定义，继续通过原 test:prisma8:migration:preflight 入口纳入未来完整 ready。
+
+### 独立参考库历史重放门禁
+
+- `apps/server/prisma7-reference.config.ts`：独立参考库专用 Prisma 7 配置，只读取固定参考库 URL 和子进程显式确认，不回退业务数据库。
+- `scripts/replay-prisma8-migration-reference.mjs`：固定验收指纹和 Contract、空库/其他连接只读门禁、Prisma 7.10.1 固定 deploy/status、首次/二次目录与迁移登记比较。
+- `scripts/replay-prisma8-migration-reference.cases.mjs`：九项安全门禁及模拟重放控制流测试；`pnpm run test:prisma8:migration:replay` 纳入后续完整 ready。
+- `pnpm run db:prisma8:migration:replay --confirm-adui-scada-fresh-prisma8-ref`：人工确认、手工建立的专用空库才允许执行真实历史重放；不创建、重置、删除数据库，不授予签名许可。
+
+### 原生 Prisma 8 Contract 独立候选
+
+- `apps/server/prisma/native-contract.template.prisma`：物理结构优先的原生 PSL 模板；运行时从已匹配的参考库目录补齐 36 个精确命名的 CHECK。候选恢复六字段末次事件外键，反向单值导航兼容性单独评审。
+- `apps/server/prisma8-native.config.ts`：独立候选配置，离线命令不传数据库连接，官方只读验证入口临时注入受限测试库连接；源码和生成物仅在根忽略目录 .artifacts/prisma8-native，正式配置与生成物保持不变。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：内部复用双库只读目录匹配流程供候选提取，原入口报告形状、指纹及查询序列不变。
+- `scripts/prisma8-native-contract-review.mjs`：普通 CHECK 谓词提取、PSL 模板填充、物理 IR 和运行时领域模型/映射/关系/生成器对照。
+- `scripts/prisma8-native-contract.mjs` / `pnpm run db:prisma8:native:review`：显式双库只读采集、锁定已验收指纹与 Prisma 8 版本、独立离线 emit 和评审；禁止覆盖旧产物或签名。
+- `scripts/prisma8-native-contract.cases.mjs` / `pnpm run test:prisma8:native`：九项离线模拟回归（含表名 UTF-16 字典序）；CLI 四项、迁移预检十六项及重放门禁九项，均纳入未来完整 ready，真实候选生成保持人工独立执行。
+
+### 原生候选离线运行时兼容评审
+
+- `scripts/prisma8-native-runtime-review.mjs` / `pnpm run db:prisma8:native:runtime`：验证已验收候选标识和唯一允许的关系差异；服务端 TypeScript 双契约内存编译，禁止写回生成物或接管数据库，依赖保留的原生候选。
+- `scripts/prisma8-native-runtime.cases.mjs` / `pnpm run test:prisma8:native:runtime`：六项离线回归，含真实 TypeScript 最小编译夹具，纳入 ready，不依赖候选或数据库。
+- `pnpm run db:prisma8:native:skills:list`：通过现有 CLI 固定映射查询独立原生配置的根目录 Skills 列表；CLI 五项回归，正式同步入口不变。
+
+### 原生候选发布关系只读查询评审
+
+- `apps/server/prisma8-native-query-probe.mjs` / `pnpm run db:prisma8:native:query`：只连接已验收本机测试库，复用目录预检、保留契约和六字段关系差异门禁；在同一只读事务内比较独立 SQL、正式 ORM 和原生 ORM 发布状态/末次事件，不输出业务记录。
+- `scripts/prisma8-native-query-review.mjs`：六字段闭包、bigint、空关联、显式事件读取与隔离范围结果的独立比较器。
+- `scripts/prisma8-native-query.cases.mjs` / `pnpm run test:prisma8:native:query`：七项离线回归，纳入 ready；真实库查询仍为单独手工专项。
+
+### Prisma 8 原生候选官方结构验证
+
+- scripts/prisma8-cli.mjs / pnpm run db:prisma8:native:schema:verify：根目录精确白名单包装 Prisma 8 官方 db verify --schema-only；仅允许本机 adui_scada_test，连接强制只读、超时与 public search_path，不将凭据放入 CLI 参数。
+- scripts/prisma8-cli.cases.mjs：CLI 离线模拟回归扩展为八项，验证 schema-only 参数、隔离库 URL 守卫、只读连接选项、离线生成不继承数据库 URL及拒绝写入命令。真实官方 verifier 仍需 Windows 单独执行。
+
+### 原生迁移基线与注释补充评审（规划）
+
+- 现有 `scripts/inspect-prisma8-migration-readiness.mjs` 的非主键索引目录查询不包含底层主键索引；历史 SQL 已确认两个归档主键索引有中文注释，需独立补充只读检查。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；补充只读核验和独立离线候选门禁入口见下节；真实重放尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。
+
+### Prisma 8 主键索引与最终中文注释补充核验
+
+- `scripts/prisma8-native-catalog-supplement.mjs`：当前八项历史 SQL 固定字面量注释提取、最终注释对象检查、主键索引结构与双库定义对照、独立范围指纹。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：新增独立补充快照入口，仅该入口增加主键索引 SELECT；原非主键目录及指纹、既有报告和查询顺序保持。
+- `scripts/compare-prisma8-catalog-supplement.mjs` / `pnpm run db:prisma8:native:catalog`：真实双库只读专项，校验历史原文 SHA-256、明确隔离 URL、旧指纹及补充证据，不输出数据库行或凭据。
+- `scripts/prisma8-native-catalog-supplement.cases.mjs` / `pnpm run test:prisma8:native:catalog`：七项离线判定测试；原 `test:prisma8:migration:preflight` 扩至十九项，均纳入 ready，真实专项不纳入 ready。
+- 离线基线候选生成及重放入口尚未开放，须单独批准。
+
+### Prisma 8 原生迁移基线独立离线候选门禁
+
+- `apps/server/prisma8-native-baseline.config.ts`：独立无数据库连接、无 dotenv 配置，消费根忽略目录 .artifacts/prisma8-native-baseline 中的保留候选副本及全新 migrations 图。
+- `apps/server/prisma8-native-baseline-plan.mjs` / `pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline`：仅明确确认后进入真实离线规划。复核原生契约与正式契约物理及运行时评审、声明标识、历史迁移，保留两个原始生成目录。
+- `scripts/prisma8-native-baseline.mjs`：固定版本与包内 CLI 路径、安全目录及环境白名单、独立原文副本、固定空起点规划、生成物形状与目标快照内容门禁；只返回 BASELINE_ARTIFACT_REVIEW_REQUIRED、签名和部署许可均否。
+- `scripts/prisma8-native-baseline.cases.mjs` / `pnpm run test:prisma8:native:baseline`：原九项模拟 CLI 与本地文件系统测试已更新为十二项，纳入 ready；真实离线规划不纳入 ready。生成包 DDL、操作内容、注释、依赖解析及新空库重放仍须独立审查。
+
+### 原生离线基线 E-144 复验入口
+
+- scripts/prisma8-native-baseline.mjs：固定 RC 成功 Envelope、实际操作摘要及执行预览对照；拒绝非新增、诊断、临时值、扩展、已应用语句和异常目录，保留完整目标快照比较。
+- pnpm run db:prisma8:native:baseline:review：复用 apps/server/prisma8-native-baseline-plan.mjs 的历史和原生评审，仅只读验收已有独立基线，不启动生成 CLI。生成入口原确认参数及禁止覆盖保护保持。
+- 原九项模拟门禁更新真实形状并增加三项回归，共十二项，继续纳入 ready。真实候选缺少全部 119 项注释，待独立 DDL 评审。
+
+### 原生基线固定原件 DDL/注释文本专项
+
+- scripts/prisma8-native-baseline-ddl.mjs：固定实际原包十文件及历史八份 SQL 指纹；复用已验收物理 IR，独立生成受控类型、默认值、主键、CHECK、索引及外键的精确文本；按 ID、依赖阶段及全文核对 46 条实际 execute SQL，不执行 SQL。复用历史注释提取器生成 119 项 public 限定独立审查文本与指纹。
+- pnpm run db:prisma8:native:baseline:ddl：复用既有候选只读复验入口，输出固定原包与 DDL/注释审查状态；pnpm run db:prisma8:native:baseline:comments：同门禁后向标准输出附加注释审查文本，不写入迁移目录。两个入口不运行规划、自发射或数据库。
+- pnpm run test:prisma8:native:baseline:ddl：八项离线回归，纳入 ready；真实固定候选专项仍独立运行。原包仍缺 119 项注释，状态 DDL_TEXT_MATCHED_COMMENTS_BLOCKED，签名及部署许可否。
+
+### 原生基线独立中文注释自发射候选
+
+- scripts/prisma8-native-baseline-comments.mjs：受控注释文本转换、参数化预/后置检查、官方脚手架追加、干跑输出解析及完整迁移操作与元数据比较；不接触数据库。
+- scripts/prisma8-native-baseline-comment-emission.mjs：独立文件副本、固定 Node 子进程、原件回读、干跑/自发射及 migration check 完整性门禁，失败保留证据。
+- apps/server/prisma8-native-baseline-comments.config.ts：不加载环境或数据库连接，输出到服务端忽略目录，使用已安装固定依赖；原基线与正式生成物不变。
+- pnpm run test:prisma8:native:baseline:comments：十项纯离线逻辑测试（含 E-146 脚手架语法定位回归），纳入 ready。pnpm run db:prisma8:native:baseline:comments:emit --confirm-offline-comments：明确确认后才运行真实离线自发射，不纳入 ready；成功仍仅 COMMENTS_EMITTED_REVIEW_REQUIRED。
+
+### 独立原生中文注释候选部署前离线复验
+
+- scripts/prisma8-native-baseline-candidate.mjs：固定已验收迁移标识与独立配置字节指纹，十四文件精确树、完整源码/操作/快照及历史成功证据比较、确定性证据清单与指纹。
+- scripts/prisma8-native-baseline-comment-emission.mjs 的 runCandidateReview：仅复验已有候选，固定已安装 RC 的 dry-run 与 migration check，逐阶段复查原件和证据不变，不写新文件或执行数据库命令。
+- pnpm run test:prisma8:native:baseline:candidate：七项离线合成回归，纳入 ready；pnpm run db:prisma8:native:baseline:comments:review：真实独立只读入口，不纳入 ready。输出 CANDIDATE_PREFLIGHT_REVIEW_REQUIRED、签名/部署许可否，真实首次文件指纹待采集。
+
+### 固定候选证据与第三座专用空库只读预检
+
+- scripts/prisma8-native-baseline-accepted-evidence.json：维护者 PR #222 实际十四文件证据清单及指纹，不含生成物正文或凭据。
+- scripts/prisma8-native-baseline-preflight.mjs：固定完整证据、第三座专用库显式 URL 与连接参数、只读事务及 23 类目录/会话检查，回滚关闭和脱敏诊断。
+- scripts/prisma8-native-baseline-comment-emission.mjs：候选复验前固定证据比较，requireLockedCandidateEvidence 用于数据库预检结束后的文件再核对。
+- pnpm run test:prisma8:native:baseline:preflight：十项离线合成测试（含 E-147/E-148 字符码及脱敏诊断回归），纳入 ready；pnpm run db:prisma8:native:baseline:preflight --confirm-adui-scada-fresh-prisma8-native：只读真实入口，不纳入 ready，须单独设置专用环境变量 SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL。输出 NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；不创建库、不写数据库、不签名或部署。
+
+### 原生基线独立迁移入口
+
+- `apps/server/prisma8-native-baseline-migrate.config.ts`：第三座专用库固定配置，独立于原离线配置。
+- `apps/server/prisma8-native-baseline-migrate.mjs`：原件与空库复验、官方在线路径及独立应用包装。
+- `scripts/prisma8-native-baseline-migrate.mjs` / `.cases.mjs`：固定参数、机器响应、唯一迁移边和标记检查及离线回归。
+
+### 原生基线迁移失败恢复检查
+
+- `scripts/prisma8-native-baseline-recovery.mjs`：再次写入冻结门禁、固定进程/官方/SQLSTATE 诊断、第三座库只读目录及 marker/ledger 匹配统计。
+- `scripts/prisma8-native-baseline-recovery.cases.mjs` / `pnpm run test:prisma8:native:baseline:recovery`：六项模拟回归；真实 PostgreSQL 与固定 RC 元数据待验证。
+- `pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state`：仅恢复只读入口，不启动官方迁移，不清理数据库，原有迁移确认暂时拒绝。
+
+### 原生基线恢复评审后的单次诊断执行
+
+- `scripts/prisma8-native-baseline-retry.mjs` / `.cases.mjs`：固定一次性确认、独占尝试记录及官方直接错误封装识别，五项独立回归。
+- `scripts/prisma8-native-baseline-recovery.mjs` / `.cases.mjs`：保留旧确认冻结与只读状态检查，补充直接错误封装回归；`test:prisma8:native:baseline:recovery` 合计十二项。
+- `pnpm run db:prisma8:native:baseline:migrate --confirm-adui-scada-fresh-prisma8-native-retry-once`：仅维护者人工确认后使用，原预检和候选保护不变，禁止重复调用及清理尝试记录。
+
+### 真实单次恢复后的严格结构只读对照
+
+- `apps/server/prisma8-native-baseline-migrate.mjs` / `scripts/prisma8-native-baseline-recovery.mjs`：原写入确认与单次恢复确认全部冻结，不依赖尝试记录是否存在，既有只读恢复入口保持可用。
+- `scripts/prisma8-cli.mjs` / `.cases.mjs`：新增固定严格结构只读映射；沿用本机 adui_scada_test URL 白名单，不允许第三座专用库或附加参数。
+- `pnpm run db:prisma8:native:schema:verify:strict`：官方 schema-only + strict + JSON，只用于本机控制组差异调查，真实 RC 结构校验结果待验收。原宽容入口不变。
+
+### 固定候选执行检查离线评审
+
+- `scripts/prisma8-native-baseline-execution-review.mjs` / `.cases.mjs`：结构检查条件提取及四项模拟回归；仅统计注释检查覆盖。
+- `apps/server/prisma8-native-baseline-execution-review.mjs`：固定 RC、原包及十四文件门禁，读取并复核 ops.json，不启动任何 CLI 或数据库连接。
+- `pnpm run test:prisma8:native:baseline:execution`：定向测试；`pnpm run db:prisma8:native:baseline:execution:review`：离线 JSON 证据入口，不加入自动迁移或自动部署流程。
+
+### 固定迁移目标直接结构对照
+
+- `scripts/prisma8-native-direct-schema-review.mjs` / `.cases.mjs`：固定历史验收库连接、公开直接校验顺序、目标及结果验证、脱敏路径、关闭与证据复核保护和七项模拟回归。
+- `apps/server/prisma8-native-direct-schema-review.mjs`：复用固定证据门禁、核对快照与根契约，动态装载官方控制入口；只允许历史验收库两种只读验证。
+- `pnpm run test:prisma8:native:baseline:direct-schema`：纯模拟定向测试，加入 ready；`pnpm run db:prisma8:native:baseline:direct-schema:review`：单独执行的真实只读专项，不加入 ready。
+
+### 原生迁移结构失败离线诊断
+
+- `scripts/prisma8-native-schema-failure-review.mjs` / `.cases.mjs`：唯一错误封装、差异类别及路径脱敏的离线解析，七项模拟回归。
+- `scripts/prisma8-native-direct-schema-review.mjs`：导出既有 `allowedPaths`，复用契约路径白名单，不改变原有直接验证。
+- `apps/server/prisma8-native-schema-failure-review.mjs`：固定候选证据、标准输入限制及报告入口，不连接数据库。
+- `pnpm run test:prisma8:native:baseline:schema-failure`：纯离线测试，加入 ready；`pnpm run db:prisma8:native:baseline:schema-failure:review`：已有机器输出离线解析，不加入 ready。
+
+## 2026-11-26 · 第四座独立实例复现入口
+
+- `scripts/prisma8-native-isolated-repro.mjs`：固定第四座专用连接、Docker 镜像及资源边界、集群身份、一次性记录、两路脱敏差异提取与原始捕获文本加密保存。
+- `scripts/prisma8-native-baseline-preflight.mjs`：内部共享二十三类只读检查，新增固定第四座角色/库名/170011/集群标识分支；第三座公开入口及连接白名单保持不变。
+- `apps/server/prisma8-native-repro.config.ts`：只接受第四座专用连接，消费独立十四文件副本。
+- `apps/server/prisma8-native-isolated-repro.mjs`：官方离线复验、独立候选、容器和 TCP 集群身份核验、唯一在线预览、再次预检、一次性记录和固定迁移调用；结果仅为取证评审。
+- `pnpm run test:prisma8:native:baseline:repro`：八项离线测试，纳入 ready；原空库专项扩至十二项。
+- `pnpm run db:prisma8:native:baseline:repro --confirm-adui-scada-fresh-prisma8-repro-once`：已单独授权的第四座本机单次实验，专用环境变量 SCADA_PRISMA8_NATIVE_REPRO_PASSWORD，真实入口不纳入 ready，不创建/重置数据库，不重复运行。
+
+### 2026-11-26 · CHECK 表达式修复离线入口
+
+- `scripts/prisma8-native-check-repair.mjs`：两项真实失败谓词的精确 PSL 属性替换；严格比较新官方契约与原契约，除两项 expression 和新 storageHash 外拒绝任何差异。
+- `scripts/prisma8-native-check-repair.cases.mjs`：七项离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair.config.ts`：不含数据库连接的固定离线配置，独立输出根目录 .artifacts/prisma8-native-check-repair。
+- `apps/server/prisma8-native-check-repair.mjs`：复核原包、十四文件指纹、正式生成物、历史八迁移及 119 项历史注释，固定 RC 的 contract emit，检查新契约声明哈希与官方静态装载；禁止覆盖、签名、部署或迁移。
+- `pnpm run test:prisma8:native:baseline:check-repair`：离线回归；`pnpm run db:prisma8:native:baseline:check-repair --confirm-offline-check-repair`：独立发射，不连接数据库，不纳入 ready 的实际发射。
+- 第四座原复现入口和专用 config 均已新增无条件写入冻结；原凭据校验、加密证据格式与诊断解析保留供历史审查。原八项测试外新增冻结回归一项。
+
+### 2026-11-26 · CHECK 修复完整离线迁移包
+
+- `scripts/prisma8-native-check-repair-package.mjs`：固定新契约三文件指纹、两项结构谓词严格差异及新包证据指纹；八项回归，纳入 ready。
+- `scripts/prisma8-native-baseline.mjs`：提取共享离线规划产物检查，保留旧入口固定目标与名称；新入口明确传入固定修复目标。
+- `apps/server/prisma8-native-check-repair-plan.config.ts`、`apps/server/prisma8-native-check-repair-complete.config.ts`：两份无数据库连接配置，独立生成目录 plan 与 complete，配置原文指纹受控。
+- `apps/server/prisma8-native-check-repair-package.mjs`：原件和第四座副本复核、固定 RC 空起点规划、46 项 DDL、119 项注释、165 项操作官方干跑/自发射、迁移完整性检查，24 文件证据报告；不访问数据库，不改写旧候选。
+- `pnpm run test:prisma8:native:baseline:check-repair-package`：纯离线回归；`pnpm run db:prisma8:native:baseline:check-repair-package --confirm-offline-check-repair-package`：真实离线生成，独立授权，不加入 ready 实际发射。
+- `apps/server/.artifacts/prisma8-native-check-repair-package`：精确生成物排除，仍检查相邻目录和自有源码。四座数据库冻结、正式 Prisma 7 保持不变。
+
+### 2026-11-26 · 固定 CHECK 修复迁移包复验
+
+- `scripts/prisma8-native-check-repair-package-accepted-evidence.json`：维护者真实报告的 24 文件及两份配置固定证据。
+- `scripts/prisma8-native-check-repair-package-review.mjs`：固定清单和原始字节门禁、阶段复核与封闭官方命令序列。
+- `scripts/prisma8-native-check-repair-package-review.cases.mjs`：十项离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair-package-review.mjs`：复用既有规划、DDL、注释、执行检查语义，重新官方干跑与完整性校验。
+- `apps/server/prisma8-native-check-repair-package.mjs`：新增明确的已有包复验模式，原生成确认与禁止覆盖保持不变。
+- `pnpm run db:prisma8:native:baseline:check-repair-package:review`：只在原验收工作区复验固定产物，不纳入 ready 的真实官方执行；无数据库访问。
+
+### 2026-11-26 · 固定 CHECK 往返离线计划
+
+- `scripts/prisma8-native-check-roundtrip.mjs`：固定两项谓词的三阶段计划、精确元数据及输入结果判定，未认证观察不得宣称真实往返。
+- `scripts/prisma8-native-check-roundtrip.cases.mjs`：八项纯离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair-package.mjs`：新增独立 `--plan-check-roundtrip` 模式，复用完整官方离线复验与固定证据门禁，不改变原生成及复验分支，不连接数据库。
+- `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`：原工作区已有包的只读计划输出，实际数据库执行与观察采集尚未实现或授权。
+
+### 2026-11-26 · 固定 CHECK 往返事务模拟与隔离边界
+
+- `scripts/prisma8-native-check-roundtrip-execution.mjs`：真实验收计划指纹复算、模拟目标边界和回滚式事务协议；无真实连接入口。
+- `scripts/prisma8-native-check-roundtrip-execution.cases.mjs`：十二项离线模拟回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair-package.mjs`：仅为既有往返计划分支新增固定指纹门禁，不改变官方修复包生成及完整复验入口。
+- `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`：纯模拟，无数据库访问。
+
+### 2026-11-26 · 第五座创建前宿主机只读预检
+
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：固定本机 Docker 端点、镜像、资源及 Windows TCP 记录检查；失败停止，报告不授予创建许可。
+- `scripts/prisma8-native-check-roundtrip-host.cases.mjs`：八项模拟子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-host` 纳入 ready。
+- `pnpm run db:prisma8:native:baseline:check-roundtrip:host-preflight`：只读宿主机实际入口，不纳入 ready，不连接数据库、不创建实例或保留端口。
+
+### 2026-11-26 · 第五座创建前冻结库目录只读采集
+
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：提取内部已核验宿主机调用上下文，原宿主机只读报告不变；单独确认后才调用固定目录采集核心。
+- `scripts/prisma8-native-check-roundtrip-reference.mjs`：受控容器身份、两个只读系统目录、四库排序规则及版本核验，不创建资源、不读取业务表、不输出原始标识。
+- `scripts/prisma8-native-check-roundtrip-reference-entry.mjs`：独立真实只读入口，要求单独确认参数；失败固定脱敏诊断。
+- `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：七项注入子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-reference` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly` 真实入口不纳入 ready。
+
+### 2026-11-27 · 冻结库排序规则报告修正
+
+- `scripts/prisma8-native-check-roundtrip-reference.mjs`：明确区分版本 MATCHED 与 UNAVAILABLE；增加固定镜像 ID、挂载目标 JSON、指定运行环境路径的 docker diff 观察，完整运行时身份认证保持 false。
+- `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：现为十二项注入子进程回归，原测试入口与 ready 注册不变；真实入口及确认参数不变，不新增依赖。
+
+### 2026-11-27 · 第五座待审批创建契约
+
+- `scripts/prisma8-native-check-roundtrip-creation.mjs`：固定参考报告、待审批资源与初始化契约、独立创建计划指纹及纯请求匹配器，不授予实际许可。
+- `scripts/prisma8-native-check-roundtrip-creation-entry.mjs`：复用既有四库只读采集的真实入口，仅输出待审批计划；确认参数沿用冻结库只读确认。
+- `scripts/prisma8-native-check-roundtrip-creation.cases.mjs`：八项离线回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-creation` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly` 不纳入 ready，不创建资源。
+
+### 2026-11-27 · 第五座停止态资源创建执行器
+
+- `scripts/prisma8-native-check-roundtrip-create-stopped.mjs`：固定已验收创建指纹、专用凭据白名单、同一端点重新只读预检、工作区独占尝试登记、专用卷/网络/停止态容器创建及归属复验；不启动、不清理、不重试。真实 `db:prisma8:native:baseline:check-roundtrip:create-stopped` 不纳入 ready，须单独授权。
+- `scripts/prisma8-native-check-roundtrip-create-stopped.cases.mjs`：八项注入子进程及真实临时目录回归，`test:prisma8:native:baseline:check-roundtrip-create-stopped` 纳入 ready。
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：新增只读上下文接口返回原已核验端点与报告，原宿主机和参考目录入口的公开报告不变。
+- `.artifacts/prisma8-native-check-roundtrip-creation/attempt.json` 与 `result.json`：真实创建时生成的本地保留记录，已由既有 `.artifacts/` 忽略规则覆盖，不含凭据。
+
+## 2026-11-27 · 原生全新安装
+
+- `apps/server/prisma/contract.prisma`：Git 原生 PSL 全新契约，保留已验收业务约束。
+- `apps/server/prisma/initial-comments.sql`：一百一十九条固定中文注释，不含历史迁移重放。
+- `apps/server/prisma8-fresh.config.ts`：独立配置，生成产物位于根目录 .artifacts/prisma8-fresh。
+- `apps/server/prisma8-fresh-install.mjs`：官方发射、固定本机空库身份核验、只读规划、显式首次初始化、注释与严格验证。
+- `scripts/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.cases.mjs`：连接、契约与计划边界、诊断脱敏及离线回归。
+- `scripts/prisma8-native-baseline-preflight.mjs`：复用二十三类目录只读检查，新增全新业务库集群标识与 PostgreSQL 19 实际版本核验。
+- `scripts/docker-stack.mjs`：新增仅基础设施启动模式，根 docker:up 使用该模式，正式应用 Provider 尚未切换。
+
+### 全新原生运行时评审
+
+- `scripts/prisma8-native-runtime-review.mjs`：保留历史候选门禁，新增全新存储标识及原生生成物的服务端内存类型评审。
+- `scripts/prisma8-fresh-runtime-probe.mjs`、`scripts/prisma8-fresh-runtime-probe.cases.mjs`：同一调用方连接的只读 ORM 探针、前后身份复核及失败脱敏关闭回归。
+- `apps/server/prisma8-fresh-install.mjs`：新增独立只读 runtime-review 模式，复用严格结构及注释核验，不触发首次写入分支；正式 DatabaseModule 不变。
+- `pnpm run db:prisma8:fresh:runtime:review`：实际原生契约类型与已初始化本机业务库的只读运行时验收，不属于自动 ready。
+
+### 原生 NestJS 数据库提供方
+
+- `apps/server/prisma8-runtime.config.ts`：固定原生 PSL 离线生成路径，不接受连接。
+- `apps/server/src/database/prisma8-runtime-boundary.ts`：本机 URL、实际标记和生命周期硬门禁。
+- `apps/server/src/database/prisma8.service.ts` 与 `prisma8-database.module.ts`：原生类型客户端、共享连接池、Nest 生命周期，尚未挂载正式业务模块。
+- `apps/server/prisma8-provider-smoke.mjs`：使用编译后的独立模块完成真实只读装配烟测。
+- `scripts/prisma8-provider.cases.mjs`：八项边界与生命周期专项，纳入 test:prisma8:fresh。
+- `pnpm run db:prisma8:fresh:runtime:generate`：离线生成原生运行时契约，服务端 db:generate 同步生成两代客户端。
+- `pnpm run db:prisma8:fresh:provider:smoke`：构建后执行的真实本机只读烟测，不纳入自动 ready 的真实连接阶段。
+
+### 原生身份与工程 ACL 查询仓储
+
+- `apps/server/src/auth/authorization-read-store.ts`：共同只读查询端口、输入与可信主体保护。
+- `apps/server/src/auth/prisma7-authorization-read-store.ts`：旧正式模块显式过渡实现。
+- `apps/server/src/auth/prisma8-authorization-read-store.ts`、`prisma8-authorization.module.ts`：新原生仓储和互斥装配，复用唯一原生 Provider。
+- `apps/server/src/database/prisma8-read-transaction.ts`：同一事务内前后复核身份、标记、隔离与只读模式。
+- `apps/server/src/auth/oidc-callback.service.ts`、`scada-project.guard.ts`：只依赖统一读仓储端口；身份模块显式导出跨模块注入令牌。
+- `scripts/prisma8-authorization-read.cases.mjs`、`apps/server/src/auth/prisma8-authorization-read-store.spec.ts`：边界及查询回归。
+- `apps/server/prisma8-provider-smoke.mjs`：真实 Nest 原生查询与 Guard 拒绝扩展烟测，不改变原有命令或初始化分支。
+
+### 原生身份事务接入候选
+
+- `apps/server/src/auth/prisma8-auth-transaction-port.ts`、`prisma8-session-operations.ts`、`prisma8-oidc-login-operations.ts`：共享原生会话和 OIDC 操作逻辑，历史隔离候选仍独立校验目标。
+- `apps/server/src/auth/prisma8-runtime-identity.service.ts`、`prisma8-identity.module.ts`：新原生身份服务及独立 Nest 装配，不挂正式 HTTP 路由。
+- `apps/server/src/database/prisma8-read-transaction.ts`：原生读事务与显式可写事务边界；`prisma8.service.ts` 提供共享运行时入口。
+- `apps/server/prisma8-provider-smoke.mjs`、`apps/server/src/auth/prisma8-runtime-identity.service.spec.ts`：原生身份只读烟测与事务模拟回归。
+
+### 原生工程查询候选
+
+- `apps/server/src/database/prisma8-text-transaction.ts`：两代契约独立适配的参数化文本查询与影响行数，支持 BigInt；原身份端口转发并保持原异常语义。
+- `apps/server/src/projects/prisma8-project-query-store.ts`：共享五项查询业务操作，历史候选原隔离门禁和构造签名保持。
+- `apps/server/src/projects/prisma8-runtime-project-query-store.ts`、`prisma8-project-query.module.ts`：原生业务库查询及独立 Nest 装配；四项共享锁查询在严格只读配置提前拒绝。
+- `apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts`、`apps/server/src/database/database.module.spec.ts`：十项查询回归及一项原生模块隔离断言；既有只读烟测新增列表与锁模式拒绝。
+
+### 全新原生工程持久化
+
+- `apps/server/src/projects/prisma8-runtime-project-version-store.ts`：当前原生工程读写仓储；继承五项原生查询，新增创建和 CAS 追加。
+- `apps/server/src/projects/prisma8-project-persistence.module.ts`：原生工程读写统一装配，取代独立查询模块。
+- `apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts`：十一项原生写事务模拟回归。
+- `apps/server/prisma8-provider-smoke.mjs`：原生工程读写模块装配及严格只读写入拒绝。
+
+### 全新原生发布仓储
+
+- `apps/server/src/projects/prisma8-runtime-project-release-store.ts`：原生当前发布读取、发布及内部回滚，固定安全拒绝、参数化 SQL、独立 ACL、幂等及指针 CAS。
+- `apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts`：15 项原生模拟事务回归。
+- `apps/server/src/projects/prisma8-project-persistence.module.ts`：共享原生版本与发布仓储装配。
+- `apps/server/prisma8-provider-smoke.mjs`：新增当前发布锁读取、发布及回滚严格只读拒绝核验。
+
+### 正式原生 HTTP 应用装配
+
+- `apps/server/src/app.module.ts`：OIDC 启用根模块经现有 ProjectApiModule 统一使用原生业务仓储；默认应用不注册数据库。
+- `apps/server/src/auth/scada-identity.module.ts`：正式身份 Controller、Guard、审计与原生身份模块重新导出。
+- `apps/server/src/projects/project-persistence.module.ts`：正式工程令牌引用原生版本及发布仓储的同一实例。
+- `apps/server/src/auth/prisma8-runtime-identity.service.ts`：正式可写模式恢复定时清理，严格只读模式禁用调度。
+- `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：实际根模块的内存事务 HTTP 验收及唯一提供方检查。
+- `apps/server/prisma8-provider-smoke.mjs`：正式根模块的真实 PostgreSQL 严格只读装配及关闭验证。
+
+### 原生 Docker 启动与容器探针
+
+- `scripts/docker-stack.mjs`：Windows 本机 Docker 上下文保护、固定启动顺序、严格库验证、标准输入烟测。
+- `scripts/docker-stack.cases.mjs`：18 项 Docker 启动与部署安全配置回归。
+- `apps/server/container-prisma8-smoke.mjs`：容器内部复用正式原生只读探针及双端 HTTP/SSE 代理核验。
+- `apps/server/prisma8-provider-smoke.mjs`：宿主/容器共享只读根模块验收，容器 transport 独立受限。
+- `apps/server/src/database/prisma8-runtime-boundary.ts`：容器只读 transport 必须绑定固定 postgres:5432 及已核验集群；默认宿主白名单不变。
+- `deploy/docker/README.md`：当前原生安装、启动、访问与验收说明。
+
+### 双端 Docker HTTPS 候选
+
+- `deploy/docker/compose.yaml`、`deploy/docker/nginx.conf`、`deploy/docker/Dockerfile.web`：共享 HTTP/HTTPS 双监听、回环发布和叶证书只读挂载。
+- `scripts/docker-web-https-smoke.mjs`：宿主严格 TLS 只读探针、六条固定 GET 路径、SSE 缓存策略与连接清理、脱敏机器标志。
+- `scripts/docker-stack.mjs`、`scripts/docker-stack.cases.mjs`：端口冲突验证、宿主探针门禁及 22 项启动/部署安全回归定义。
+- `.env.example`、`scripts/check-env-config.mjs`：双端 HTTPS 端口配置与旧根环境文件的缺省值兼容。
+
+### Docker Keycloak 可信 Discovery/JWKS 只读候选
+
+- `apps/server/container-oidc-discovery.mjs`：两种固定网络视角、公开 Issuer 与严格 TLS/IP 身份、有限 JSON、元数据/RS256 公钥校验、固定脱敏机器结果；仅按显式入口执行。
+- `scripts/docker-oidc-probe.mjs`：复用本机公开 CA、标准输入、宿主/容器报告及公钥集合一致性；固定阶段错误诊断。
+- `scripts/docker-stack.mjs`：新增受控只读 oidc 模式，保持原有启动及数据库验证流程；`deploy/docker/Dockerfile.server` 仅复制独立探针。
+- `scripts/docker-oidc-discovery.cases.mjs` 10 项、原 `scripts/docker-stack.cases.mjs` 25 项，通过现有 test:docker 纳入 ready；真实 docker:oidc:probe 仅手工执行。
+
+### 正式 OIDC Docker 传输候选
+
+- `apps/server/src/auth/docker-oidc-transport.ts`：固定 Keycloak 内部 HTTPS 请求、公开 Host 与 IP 证书身份、仅授权码 Basic POST、有限 JSON、取消和错误脱敏；不实现 OIDC 协议本身。
+- `apps/server/src/config/oidc-startup.config.ts` / `apps/server/src/auth/oidc-provider-discovery.service.ts`：可选受信 CA 注入、固定元数据端点、SDK 显式 JWS 签名验证；环境解析及 Docker 启用开关保持原状。
+- `apps/server/container-oidc-discovery.mjs` / `scripts/docker-oidc-probe.mjs`：容器显式验收复用编译后正式 Discovery 服务，要求 formalClientVerified，宿主独立比较公钥集合。
+- `scripts/docker-oidc-transport.cases.mjs`：六项离线传输测试进入 test:docker；`apps/server/src/auth/oidc-provider-discovery.service.spec.ts` 增加两项正式配置/签名测试。
+
+### Docker 常驻原生只读数据库候选
+
+- `apps/server/src/database/docker-readonly-config.ts`：固定显式容器模式、三字段绑定解析与固定容器只读 URL。
+- `scripts/docker-runtime-binding.mjs`：宿主严格预检后建立独立本地文件，既有文件只核对不覆盖；`scripts/docker-runtime-binding.cases.mjs` 七项离线测试。
+- `apps/server/src/app.module.ts`、`apps/server/src/main.ts`、`apps/server/src/database/prisma8-database.module.ts`：专用常驻只读根模块，正式 Prisma8Service 唯一装配，原默认与 OIDC 根模块不变。
+- `apps/server/src/health/docker-database-readiness.controller.ts`：容器自身回环 GET /health/database，固定只读响应或 503；`apps/server/test/docker-readonly.e2e-spec.ts` 五项 HTTP 回归。
+- `deploy/docker/compose.yaml`、`scripts/docker-stack.mjs`、`apps/server/container-prisma8-smoke.mjs`：单文件只读挂载、常驻数据库健康探针、报告硬门禁和双端公开接口拒绝。既有独立烟测保留。
+
+### 容器原生临时事务探针候选
+
+- `apps/server/src/database/docker-native-transaction-probe.ts`：单独确认参数、同一后端临时表提交/回滚回读及清理，禁止只读连接、后端漂移、影响行数异常和伪回滚成功。
+- `apps/server/src/database/docker-readonly-config.ts`、`prisma8-runtime-boundary.ts`、`prisma8.service.ts`：新增仅独立探针使用的 docker-transaction-probe transport，复用固定库、角色、绑定及集群门禁，单连接池；原常驻模块装配不变。
+- `apps/server/container-native-transaction-probe.mjs`、`deploy/docker/Dockerfile.server`、`scripts/docker-stack.mjs`：显式一次执行，严格数据库前置验证，标准输入绑定复核，固定脱敏报告及关闭。
+- `scripts/docker-native-transaction-probe.cases.mjs`、`scripts/docker-stack.cases.mjs`：八项探针和三项宿主编排离线新增回归；真实执行不进入默认启动和 ready。
+
+### Docker 原生业务角色只读核查候选（PR #257）
+
+- `scripts/docker-db-role-review.mjs`：固定两库目录查询、只读事务、前后身份与集群复核、共享角色权限摘要、12 个业务表矩阵、脱敏及失败关闭。
+- `scripts/docker-db-role-review.cases.mjs`：8 项 Node 离线专项，覆盖共享身份拒绝准入、权限与标记缺失、连接/后置漂移/关闭失败及脱敏。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增独立 `--role-review`，复用现有严格核验及固定回环连接，前后核对 Docker 集群与旧容器拒绝；`package.json` 提供 `docker:db:role:review`，`test:docker` 只纳入离线用例。
+
+### Docker 独立运行角色准备预览候选（B1）
+
+- `scripts/docker-db-role-bootstrap-plan.mjs`：固定真实目录基线及 8 条 SQL 预览纯函数，不执行 SQL；`scripts/docker-db-role-bootstrap-plan.cases.mjs`：5 项离线测试。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增 `--role-plan`，复用已验收的双库只读核查；`package.json` 提供 `docker:db:role:plan`，只将离线测试纳入 `test:docker`。实际入口不进入默认启动或 ready。
+- [角色准备预览与权限矩阵](plans/docker-native-role-bootstrap-plan.md)：B1 边界、当前原生仓储权限、锁与 Keycloak 所有权阻塞。
+
+### Docker 独立运行角色事务候选（B2）
+
+- `scripts/docker-db-role-bootstrap.mjs`：固定 SQL 事务演练、独立确认提交及只读状态核查，事务内角色属性/精确 ACL/有效权限/启动读取校验、失败保护。
+- `scripts/docker-db-role-bootstrap.cases.mjs`：8 项 Node 离线事务测试；`scripts/docker-db-role-review.mjs` 抽取同一业务事务目录核验，并在既有用例增加两项事务边界测试。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：独立确认和只读状态入口，复用严格原生契约及双库目录，后置独立复验；`package.json` 与 `scripts/check-env-config.mjs` 约束不得进入常驻启动及 ready。
+- [角色准备预览与事务门禁](plans/docker-native-role-bootstrap-plan.md)：执行边界、回滚演练及正式提交审批。
+
+### B3 全集群权限与跨库隔离
+
+- `scripts/docker-db-role-isolation.mjs` 与 `scripts/docker-db-role-isolation.cases.mjs`：六类固定只读目录、完整矩阵与四项独立回归，B2 事务集成另三项；`docker:db:role:isolation:inspect` 仅独立执行。
+- `scripts/docker-db-role-isolation-plan.mjs` 与 `scripts/docker-db-role-isolation-plan.cases.mjs`：固定已验收 PG19.0 全目录基线、分组只读变更预览和五项离线测试，`docker:db:role:isolation:plan` 复用原只读入口，所有写入许可保持 false。

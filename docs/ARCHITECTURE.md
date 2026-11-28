@@ -1,5 +1,9 @@
 # ADui SCADA · 系统架构（目标设计）
 
+> 2026-11-27 原生收敛： 正式 NestJS 根模块原生 Provider 已验收。后续只保留 Prisma 8 原生存储路径，不使用旧客户端或旧迁移执行器。保持发布和回滚安全门禁，真实工业写入仍未开放。当前清理分支尚待完整验证。
+
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **大部分为目标设计。** V0.1 已有共享 Core/Runtime、Vue/React 最小 Web、NestJS 本地进程探针和 Tauri 2 桌面壳；工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
 
 ## 1. 架构原则
@@ -475,3 +479,123 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 ### D5c6 · 历史持久化边界
 
 共享 Core 的 TagHistoryArchiveWriter 只协调已隔离内存缓冲与 TagHistoryPersistencePort；后续服务端可信适配器负责项目权限、流标识分配、事务内复合幂等键与完整内容校验、批次恢复和对账。不得将本地内存对象、回执或工程 ID 当成生产授权或持久化凭证。本批不选定新的数据库结构，不迁移数据库，不启用生产采集。
+
+### D5c7 · 归档存储及 MVP 本地模拟集成
+
+沿用既有 NestJS/Prisma/PostgreSQL，不新增数据库扩展或依赖。历史持久化适配器与原始记录编码放入 server/history，使用租户工程复合外键及独立时间查询索引，尚不注册模块或路由。保留策略、跨进程恢复、可信采集来源和访问授权继续单独设计。本地模拟闭环使用共享 runtime 的独立工程模拟数据源；仅在 React/Vue 导入工程后的会话内启用，不修改正式发布 Runtime、服务器发布指针、设备访问或原有模拟 SSE。
+
+## MVP · Prisma ORM 8 渐进迁移（候选）
+
+沿用 PostgreSQL 和既有 `prisma/schema.prisma`。引入 Prisma 8 CLI 与 `@prisma/orm-postgres`；`prisma7Schema` 读取同一 Schema，生成独立的 `src/generated/prisma8/contract.json` 与 `contract.d.ts`。迁移阶段一只提供无数据库连接配置的 Contract 生成入口，原 NestJS 数据库服务、ACL、发布事务和历史归档仍使用 Prisma 7 Client；既有 SQL 迁移及其校验和保持不变，唯一迁移执行者仍是 Prisma 7。参见 [Prisma 官方渐进迁移指南](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql-incremental)。
+
+后续先验证类型、只读查询和双客户端等价性，再逐模块迁移事务、CAS、幂等键与资源释放，最后专项评审迁移所有权。必须保留现有自定义 CHECK、复合外键、索引、中文注释及已应用迁移记录。Prisma 8 RC 未经完整验证不用于正式部署。
+
+## MVP · Prisma 8 阶段二：独立只读运行时（候选）
+
+依照官方 [运行时与事务参考](https://www.prisma.io/docs/orm/reference/transactions-and-runtime)，以已生成的强类型 Contract、contractFromJson、postgres 和调用方持有的 pg.Pool 构建 Prisma 8 客户端。新增独立探针，未注册 NestJS Provider、未切换任何生产仓储或路由。探针只允许本机 15432 端口的 adui_scada_test，连接池上限 1，连接及 SQL 执行超时各 5 秒，连接默认事务只读。先核验 current_database 和 transaction_read_only；关闭顺序为 ORM 客户端、外部连接池。默认严格模式不关闭。仅使用固定只读查询，不执行 db sign、DDL、DML 或迁移。既有 Prisma 7 服务仍是唯一业务与迁移路径。
+
+### Prisma 8 渐进迁移：历史只读对照
+
+Prisma 8 客户端工厂与历史只读读取器在隔离验收路径中复用现有生成契约和历史记录解码器。生产历史仓储仍为 Prisma 7；不将 Prisma 8 探针视为生产授权边界，连接池默认只读设置亦不等同独立数据库角色的权限隔离。暂不变更现有迁移记录、数据库标记、正式发布门禁及设备写入边界。真实已有样本对照及数据库验收完成后，方可评估生产读取路径切换。
+
+### Prisma 8 渐进迁移：历史写入事务隔离候选
+
+PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 非空严格对照，经维护者授权合入 feat/mvp-first-integration。新增 Prisma8TagHistoryStore 只供隔离验收，沿用既有 Core 持久化端口、规范编码和联合主键。Prisma 8 回调事务负责全部 DML 与复核，批次竞争通过固定参数化 PostgreSQL 冲突语句，明细使用强类型 SQL builder，重放使用 ORM；不修改正式 Prisma 7 归档或读取仓储。真实测试使用隔离的可写池和独立只读池；校验目标、精确随机工程清理及结果脱敏。本阶段不更改任何部署配置、数据库标记、迁移历史或设备写入边界；生产切换另行评审。
+
+### Prisma 8 工程版本持久化候选（隔离验证）
+
+新增独立 Prisma 8 工程版本仓储候选，沿用共享 Core 工程文档、快照 SHA-256、正式 Prisma 7 仓储的可信主体与权限判定及现有 PostgreSQL 约束。创建事务复核 active 主体、建立工程与初始未发布指针、三项基础 ACL、首版快照及审计；追加事务按租户和工程复合键获取与正式仓储一致的 FOR UPDATE 行锁，在锁内复核 version:append 与 CAS，原子写入不可变快照、推进水位并记录审计。事务提交前回读快照、元数据和审计。只允许 adui_scada_test、public、读已提交写事务；不接入 NestJS Provider、正式接口或生产库，不改变发布、回滚、身份认证、工业设备访问或迁移策略。
+
+### Prisma 8 工程查询候选（隔离验证）
+
+新增独立 Prisma8ProjectQueryStore，覆盖工程列表、详情、版本列表、完整快照和发布预检。复用可信主体、ACL 判定、Core 快照与预检契约；列表仅返回授权工程，详情与版本查询在工程共享行锁内核验权限，版本按数值修订号降序游标分页。候选仅执行查询，因 PostgreSQL FOR SHARE 需要普通事务而非只读事务，使用隔离库 ReadCommitted 事务；不将其描述为数据库只读角色或生产安全边界。正式 Prisma 7 仓储及发布执行门禁保持不变。
+
+### Prisma 8 正式发布候选（隔离验证）
+
+新增独立 `Prisma8ProjectReleaseStore`，迁移既有 `readCurrent` 与 `publish` 契约。当前发布读取不取编辑 head，按工程、会话及主体、ACL、发布状态、不可变版本、末次事件取得共享锁；发布依原顺序使用工程和状态排他锁，复核身份、ACL、幂等语义、双 CAS、SHA-256 与静态预检。发布事件及指针 CAS 同事务，失败整体回滚。独立候选限定本机隔离验收，默认安全门禁固定拒绝，成功路径仅由测试注入门禁验证，不挂载生产模块。正式回滚执行尚未实现，本批不新增回滚写入口，不开放工业设备写入。
+
+### Prisma 8 身份与会话候选（隔离验证）
+
+新增独立 `Prisma8AuthSessionService`，在可信 Issuer 与已验签主体的调用方前提下查询现有外部身份映射，不创建身份或绑定。签发在主体共享锁内核验 active 状态，沿用现有随机令牌、CSRF 摘要及十五分钟有效期；认证兼容原 Bearer/Cookie 语义，撤销按租户、主体、会话精确条件执行。候选只供本机隔离库事务验证，不替换正式 NestJS 认证 Provider、OIDC 回调、Guard 或发布安全门禁。OIDC 登录事务持久化与一次性消费另批迁移。
+
+### Prisma 8 OIDC 登录事务候选（隔离验证）
+
+新增独立 `Prisma8OidcLoginTransactionService`，沿用已验证的授权请求构造、State/浏览器绑定摘要、AES-256-GCM 与 State 摘要 AAD、五分钟有效期及进程内匿名限流规则。Prisma 8 参数化事务负责创建、带行锁的一次性消费和有界过期清理；消费提交后才解密并返回 PKCE verifier，保持异常事务已消费的拒绝语义。仅允许本机隔离库和随机专用测试 Issuer；清理限定该 Issuer，不接管原服务全局过期清理，不注册正式 Provider、路由或真实身份提供方联调。正式 Prisma 7 登录事务、认证与工程安全边界不变。
+
+### Prisma 8 工程 ACL Guard 候选（隔离验证）
+
+现有工程创建事务已迁移三项创建者基础 ACL，工程版本、查询及发布仓储的锁内授权复核亦已有独立候选。本批补齐剩余正式 ScadaProjectGuard 的前置权限查询：独立 Prisma8ScadaProjectGuard 复用同一权限元数据、可信主体、hasProjectPermission 和固定安全审计原因码，在隔离库 ReadCommitted 事务内按租户、工程、主体查询完整显式权限集合，不执行 DML。无权限与不存在统一拒绝；数据库不可用时仅候选返回固定脱敏 503。Guard 不是会话认证或锁内授权的替代，不将一次通过结果缓存为持续有效授权。不新增管理员特权、授权/撤权管理接口或回滚执行入口，不注册生产 Provider。
+
+### Prisma 8 迁移接管前只读预检（隔离候选）
+
+现有 Prisma 7 迁移仍是唯一数据库变更来源。新增 [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)（Proposed），明确原生 SQL 的三十六个 CHECK 与发布状态到最后事件的六字段外键不能由当前生成 Contract 完整表达；签名和迁移基线的生成、原生约束保留以及新库重放需要另行专项。新增独立只读预检按隔离连接、历史迁移校验和、标记、物理表列、命名约束、主外键、实际 ACL 白名单、非主键索引和中文注释核验目录，输出定义指纹及 REVIEW_REQUIRED，不改变任何数据库或运行时配置。
+
+## 2026-11-27 · 数据库全新安装路线
+
+[ADR-0073](adr/0073-prisma8-fresh-install.md) 取代旧迁移接管路线。实际本机基础设施为 PostgreSQL 19.0、Redis 8.12.0 与 Keycloak 26.8.2；Prisma 8 CLI 与 Provider 固定 RC，原生 PSL 与完整中文注释直接建立新库。Keycloak 与业务库为同一 PostgreSQL 实例中的独立逻辑库。过渡期一键启动不启动正式应用、不执行旧迁移；先完成原生首次安装及验证，再将正式 NestJS 数据访问 Provider 与运行链切换。新开发库初始化不代表正式部署迁移策略完成。
+
+### 原生全新安装实际完成与正式运行时切换前置
+
+PR #241 已完成真实 PostgreSQL 19 首次初始化及独立严格校验（详见 ADR-0073 与 VALIDATION）；新业务库不再允许重复首次初始化或执行旧迁移。
+
+下一批先核对现有 Prisma 8 候选与真实原生生成物的类型兼容性，再切换正式注入。新增固定只读运行时评审入口：重新官方发射并核对存储、声明和中文注释，复用已评审的关系差异（末次发布事件六字段关联、无反向导航），保持历史标识门禁；用已安装 TypeScript 分别对旧生成物及内存替换的全新 JSON/声明进行完整服务端类型检查，不改写旧 Git 生成物。通过后复用现有本机 Docker 身份、严格 db verify 与注释核验，Prisma 8 使用全新原生契约及同一调用方 pg.Client；在查询前后核对真实集群、业务库角色、public Schema 与事务默认只读设置，只查询随机不存在的租户/工程联合键，要求 null，按顺序关闭客户端与连接，失败脱敏且不返回成功。无 DML、DDL、签名、迁移或业务值输出，不注册正式 NestJS Provider，不扩大既有隔离写入候选范围。只有评审通过才进入正式 Provider 与仓储装配阶段；真实应用启动、写入、事务、双框架及生产部署仍须分别验收。
+
+### 原生数据库提供方（独立装配候选）
+
+实现独立 Prisma8Service 与 Prisma8DatabaseModule，原生 PSL 离线发射到 src/generated/prisma8-runtime，固定版本、存储指纹、声明和注释门禁沿用全新安装入口；旧 Prisma 7 客户端及旧 Prisma 8 候选生成物暂保留，禁止互相覆盖。原生生成纳入服务端 db:generate 及构建/启动依赖，Git、Docker 上下文及共享 Format/Lint、中文扫描仅排除新增的精确生成路径。Provider 由 Nest 管理一个进程内连接池，初始仅支持本机 adui_scada:15432 固定开发边界，拒绝生产环境默认配置、远程/Keycloak/历史库、额外连接参数；启动查询核验实际数据库、角色、Schema、PostgreSQL 19、只读设置、集群标识及 app 原生标记 core_hash，不能把官方运行时的 marker 告警当作硬门禁。随后以实际原生 ORM 查询随机不存在工程联合键，再复核连接；启动失败或关闭期间拒绝暴露客户端，按顺序释放运行时和调用方连接池，保留脱敏失败阶段。单独只读烟测复用既有严格结构、注释和本机 Docker 集群身份核验，使用编译后的 Nest TestingModule 实际装配 Provider，配置只读且传入真实集群标识，确认启动、同一提供方客户端、关闭后拒绝访问。当前不导入正式身份或工程 HTTP 模块、不改变旧业务仓储隔离门禁；providerSwitched=false。正式生产角色及容器内连接策略、业务写事务、实际 Docker 构建和完整应用切换另行验收。
+
+### 原生业务授权查询装配
+
+将正式 OIDC 回调的已验签外部身份预绑定查询与工程 Guard 的前置 ACL 查询从具体 Prisma 客户端抽离为 AuthorizationReadStore，保留旧模块显式 Prisma 7 过渡绑定及已有联合键、权限投影、会话签发、HTTP 与锁内授权语义。新增 Prisma8AuthorizationModule，仅导入已验收 Prisma8DatabaseModule，使用新原生生成 Contract 实现相同端口，不复制连接池，不使用旧隔离候选或将隔离库写入门禁改为业务库。身份只查询既有活跃映射，不自动注册；完整权限集合仍由 hasProjectPermission 按可信租户、主体、工程及操作判定，非法标识查询前拒绝，固定主体副本，数据库异常固定 503，不记录授权成功。原生仓储使用 Prisma8Service.readTransaction 及新 readPrisma8Transaction，在同一 ReadCommitted 事务前后核验实际数据库、角色、Schema、PG19、集群标识、原生 marker core_hash、配置与实际只读状态及非恢复模式；只有查询及边界复核均成功才返回结果。读仓储只包含 SELECT/ORM 查询；真实烟测强制 PostgreSQL 默认及事务只读，正常可写配置只核验模式一致，不宣称所有未来业务事务都强制只读。扩展原有真实 Provider 烟测：实际 Nest 装配原生端口及正式 ScadaProjectGuard，以随机不存在的身份及租户/工程联合键核验空映射、空授权、固定 404 与 permission_denied 审计，不打印凭据或业务行，不写业务数据、不挂载 HTTP 根模块。当前正式 HTTP 根模块仍明确使用旧过渡绑定，providerSwitched=false；会话及 OIDC 事务、工程版本和发布写事务统一切换后再启动原生正式应用，禁止混合两代数据库运行。
+
+### 原生身份会话与 OIDC 事务候选装配
+
+新增共享 Prisma8AuthTransactionPort、Prisma8SessionOperations 与 Prisma8OidcLoginOperations；共享层仅使用参数化 raw/query/execute，历史候选保持原构造签名、隔离库名、只读模式、隔离级别、专用随机测试 Issuer 及旧清理定时器门禁，独立原生实现通过 Prisma8Service.readTransaction/writeTransaction 接入新生成 Contract。原生写事务明确拒绝只读配置，在同一 ReadCommitted 事务业务执行前后复核真实业务库、角色、Schema、PG19、集群标识（配置时严格比对）、原生 marker core_hash、可写模式及非恢复状态，后置校验抛错依 SDK 事务约定回滚。保留会话十秒/OIDC 五秒事务超时、主体共享锁与独立摘要、租户主体会话精确撤销、State/浏览器绑定摘要、PKCE S256、AES-GCM、Nonce、一次性 FOR UPDATE 加条件更新和按 Issuer 的 128 条有界清理。原生身份模块仅绑定现有会话及 OIDC 服务令牌、共享授权模块与原生数据库，不挂 HTTP 路由，不导入旧数据库模块；旧正式根模块不变。只读烟测覆盖随机不存在会话、Bearer/Cookie 拒绝、会话签发撤销与 OIDC 创建消费清理的拒绝，使用内存合成 OIDC 配置和禁止网络访问的发现替身；原生模块暂不启动清理定时器，正式根模块切换后另行验收。
+
+共享操作层不依赖关系映射，历史与当前原生 Contract 使用相同 PostgreSQL codec 类型，固定 RC 完整编译须实际复验。正式 NestJS 根模块、工程持久化和部署仍未切换，不能将模拟事务结果视为生产运行。
+
+### 原生工程查询仓储候选
+
+将已实现的历史 Prisma 8 工程查询候选五项业务逻辑抽出 Prisma8ProjectQueryOperations，历史构造签名、隔离库名、读已提交且非只读事务门禁不变。原生 Prisma8RuntimeProjectQueryStore 和独立 Prisma8ProjectQueryModule 仅使用已验收 Prisma8Service/Prisma8DatabaseModule，不增加连接池、控制器或正式根模块。将 E-158 已验收的参数化文本适配器移至数据库公共层 Prisma8TextTransaction，分别使用历史与原生强类型 SDK 事务构造计划，增加 BigInt 参数支持并保留身份适配器原错误文案；工程端口仅暴露 queryText 与完整 ACL 投影，不暴露 executeCount。
+
+五条业务 SQL 模板逐字比较一致，保留租户/主体/工程联合条件、工程 ID 升序及稳定游标、历史修订号 BigInt 倒序分页、最多 100 条、轻量摘要与原 SHA-256/元数据完整性、发布预检 head 一致性。详情、历史列表、指定快照及发布预检必须先取得同一工程共享锁，再查询完整权限集合并使用既有纯策略复核，拒绝未知权限；不得把前置 Guard 当成锁内授权。原生列表允许严格只读，四项锁内查询要求非只读事务配置（PostgreSQL 不允许 READ ONLY 执行 FOR SHARE），在取得事务前调用现有 assertWritable 拒绝，不通过无锁替代、自动改变连接模式或 DML 绕过；正常非只读模式仅执行 SELECT/ORM 查询，统一由 readTransaction 在同一 ReadCommitted 事务前后核验真实身份与标记，超时十秒。
+
+正式工程 API 与旧 ProjectPersistenceModule 保持不变，原生查询模块只在独立烟测装配。正式根模块统一切换、真实有权读取、锁并发和写入事务仍须分别验收。
+
+### 全新原生工程读写仓储
+
+Prisma8ProjectPersistenceModule 取代独立查询模块，工程仓储 Prisma8RuntimeProjectVersionStore 继承已验收的原生五项查询并通过 Prisma8Service.writeTransaction 实现创建和 CAS 追加。只面向全新原生 Contract，不新增旧数据适配器。正式 HTTP 根模块仍待原生发布事务及其他依赖齐备后统一切换，禁止混合两代连接。
+
+### 全新原生工程发布与回滚仓储
+
+新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。 依 ADR-0069 和 ADR-0073，不创建新连接池、不为旧数据接管增加适配。正式 HTTP 根模块暂未切换；回滚仅为内部仓储能力，双框架 API 契约和生产准入另行验收。
+
+### 正式 NestJS 根模块使用唯一原生提供方
+
+正式 OidcEnabledAppModule 仍经 ProjectApiModule 导入 ScadaIdentityModule 与 ProjectPersistenceModule，二者直接复用已验收的 Prisma8IdentityModule、Prisma8AuthorizationModule、Prisma8ProjectPersistenceModule，共用唯一 Prisma8DatabaseModule/Prisma8Service。身份模块通过重新导出原生模块提供会话、授权及可信 OIDC 配置，保留现有 Controller、Guard、CSRF、审计和授权码兑换；工程控制器既有两个类令牌暂以 useExisting 指向同一原生版本/发布仓储实例，不实例化旧 Prisma 7 仓储，不增加旧库兼容适配。默认 AppModule 仍无数据库、身份或工程 API；OIDC 启用的正式应用代码已切换，保持本机非生产连接白名单，实际新根模块验收待完成。正式可写模式恢复当前 Issuer 每 30 秒、最多 128 条过期 OIDC 登录事务清理，启动幂等、关闭清理定时器并等待正在执行的任务；严格只读模式禁用调度。发布/回滚生产安全门禁不变，回滚仍无公开 HTTP 路由，不增加工业设备操作。
+
+新增两项原生 OIDC 清理生命周期测试及两项正式根模块 HTTP E2E，现有九项模块装配断言更新为实际原生路径；HTTP 工程 Mock 改为直接授权读取端口，不再借用旧 Prisma 7 Mock ORM。真实 Provider 烟测编译实际 OidcEnabledAppModule，覆盖两个正式 Controller、唯一原生服务、旧 DatabaseModule/PrismaService 未注册、两个工程令牌与原生实例相同及原生授权/会话绑定。烟测仅对进程模块导入临时设置同步静默日志并恢复原环境值，强制真实业务库严格只读且禁止 IdP 网络发现，不监听 HTTP 端口，不启动过期清理。成功后由探针本身返回 nativeRootAssemblyVerified、singleNativeProviderVerified、legacyProviderAbsent、providerSwitched=true；独立 runtime-review 不验证根模块，不能代替本烟测。 连接白名单和固定安全门禁属于正式约束，不因装配切换而放宽；Docker 容器网络、生产连接及真实写入仍待独立验收。
+
+### 本机 Docker 七服务与原生只读验收边界
+
+恢复唯一 adui-scada Compose 七服务一键启动，新增 docker:infra 保留三服务基础设施入口。docker:up 先准备本机随机凭据与证书、验证 Compose 和固定本机 Linux Docker Desktop 命名管道，等待基础设施，再执行已有 Prisma 8 --status 官方严格结构/标记及真实中文注释只读验证；只在成功后构建并启动 server、demo、web-react、web-vue，等待应用服务运行。容器内显式探针经 server 的 lab 网络访问固定 postgres:5432/adui_scada，必须严格只读且与宿主验证的 PostgreSQL 集群 systemIdentifier 一致；复用正式原生根模块全部只读核验与关闭流程。凭据从现有 Git 忽略的随机秘密文件读取，仅经 docker exec -T 标准输入传给一次性探针，不进入服务环境、命令行或报告。两端 Web 探针验证容器网络内静态入口、/api/health、/demo/project、/demo/events 的响应状态及 SSE 内容类型、受保护工程路由保持 404。宿主默认连接白名单和正式数据库生产禁令保持不变。Docker HTTP Server 仍显式关闭 OIDC，不开放身份、工程或设备写入接口；Keycloak 本轮仅验证容器启动，不验证真实登录、JWKS、HTTPS 回调、Cookie 或双端浏览器渲染。不存在数据库自动初始化、迁移、清卷、失败回退、旧库接管或自动授权。 宿主现有正式 OIDC 业务根模块不变；容器当前 HTTP 服务与一次性数据库探针生命周期独立。
+
+### Docker 双端 HTTPS 传输候选（ADR-0066）
+
+React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 提供 TLS 1.2/1.3；宿主分别默认 18080/18081 和 18480/18481，全部仅绑定 127.0.0.1。复用既有 mkcert 叶证书与私钥的只读文件挂载，不共享凭据目录或根私钥。容器上游仍为固定 server/demo HTTP，所有 /api/ 除健康检查外均拒绝；不为 HTTPS 提前启用身份、工程 API 或业务数据库写入。原生严格只读与容器 HTTP 探针之后增加宿主可信 CA、IP SAN 与固定六路径响应检查，失败关闭并保留现场。真实认证部署仍需独立完成 Issuer、容器网络 TLS 信任、正式原生连接和双端回调/Cookie/CSRF 联调。
+
+### Docker Keycloak 双视角可信网络候选（ADR-0065 / ADR-0066）
+
+宿主与 server 容器访问同一公开 Issuer，但连接地址不同：前者为 127.0.0.1 的固定发布端口，后者为现有 lab 网络中的 keycloak:8443。两个一次性探针都用现有 mkcert 公开根证书做证书链验证，显式校验公开回环 IP 的证书身份，保留公开 Host，禁止重定向；仅访问固定 Realm 的 Discovery 与 JWKS，不发送秘密、不读写业务数据库。公开元数据必需能力及端点严格校验，RS256 公钥按 kid 与解析后的 SPKI 计算有序集合指纹，再比较两个视角结果。该诊断不改变正式 openid-client 传输、BFF Cookie、CSRF、ACL、原生数据库连接和默认关闭的容器 OIDC。仅执行独立 docker:oidc:probe；原 docker:up 不强制依赖 IdP Discovery。后续正式网络适配须单独验收，不能据公开密钥匹配推断实际 Token 已验证。
+
+### 正式 OIDC Docker 传输接入候选（ADR-0065）
+
+在现有 Discovery 服务内按受信装配显式提供的公开 CA 选择固定 Docker Fetch，否则沿用既有通用 Fetch；当前不从环境或 HTTP 输入选择此模式。公开 Issuer 固定回环 IP、发布端口及 /realms/adui-scada，容器连接固定 keycloak:8443，Host 及证书身份仍为公开地址。只允许 Discovery/JWKS GET 和固定 Token 端点 Authorization Code + client_secret_basic POST，禁止其他授权类型、任意端点、重定向、Cookie/代理请求头、TLS 降级，限制请求体 16 KiB、响应体 256 KiB、10 秒请求及调用方取消。SDK 处理协议并显式启用 JWS 签名校验，元数据在 Docker 模式精确匹配 auth/token/certs。现有容器只读探针复用正式编译服务与 Fetch，宿主独立验证公钥一致性，旧镜像缺少正式客户端标志不予通过。Docker 应用 OIDC 仍关闭，未挂载 CA 或真实客户端秘密，不打开登录/工程 API，不改变数据库、身份映射或 ACL。
+
+### Docker 常驻 NestJS 原生只读连接候选（ADR-0073）
+
+现有 docker:up 严格验证宿主 PostgreSQL 19 库及完整契约后，才以现有随机凭据、systemIdentifier 和 storageHash 建立 .local/docker-runtime/server-database.json，目录独立于 Keycloak 证书挂载，文件仅 server 只读挂载，不进入镜像、服务环境或 Git。既有绑定必须匹配，拒绝自动更新或复位。Compose 明确 SCADA_DOCKER_DB_READONLY=true，要求 OIDC 和本机模拟 API 均关闭且禁止宿主连接 URL。DockerReadOnlyDatabaseAppModule 复用 AppModule 与唯一 Prisma8DatabaseModule；连接地址固定 postgres:5432/adui_scada，使用已验收只读事务、角色、集群、契约与关闭生命周期。GET /health/database 仅容器自身回环访问，实际调用常驻 Prisma8Service 的 readTransaction，成功仅返回 status=ok、mode=docker-readonly；异常返回固定 503，非回环 404。Compose 健康检查和独立烟测必须验证该接口，旧无数据库镜像不得通过。原 /health 与 Nginx 代理不变，公开认证及工程 API 继续 404。本地已有数据库角色与隔离网络保持不变，严格只读连接模式不等于 PostgreSQL 角色最小权限或生产 TLS 部署资格；业务写入、认证及生产部署均未开启。
+
+### 2026-11-27 · 容器临时事务验收边界
+
+当前常驻服务仍为 DockerReadOnlyDatabaseAppModule，生产 OIDC、工程路由和工业写入未开启。独立临时事务进程通过固定容器网络连接同一个已核验 adui_scada 业务库，使用仅用于该显式探针的可写配置和单连接池；启动、业务事务前后及连接关闭复用正式 Prisma8Service 边界。仅对本会话 pg_temp 固定临时关系执行创建、插入、更新和删除关系，跨事务验证提交后的夹具值和主动回滚后的原值；相同后端 PID、明确回滚异常、行数和清理均是成功条件。正式业务表、身份、ACL、工程、发布记录和原生契约不写入，未增加数据库、服务或权限。临时 DDL/DML 仍须维护者明确确认；本地开发角色本身并非生产最小权限角色，命令行确认是操作门禁而非身份认证。正式可写业务及真实认证必须独立验收，不能从临时表结果推断。

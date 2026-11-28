@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { manageDockerStack, validateDockerEnv } from "./docker-stack.mjs";
+import { hasOnlyNoStore } from "./docker-web-https-smoke.mjs";
 
 const env =
   [
@@ -20,18 +21,216 @@ const env =
     "SCADA_DB_USER=adui_scada",
   ].join("\n") + "\n";
 
+const probeInput = {
+  password: "a".repeat(43),
+  systemIdentifier: "123456789",
+  storageHash: "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436",
+};
+const probeOutput = {
+  status: "DOCKER_NATIVE_PROVIDER_READY",
+  providerReady: true,
+  providerClosed: true,
+  readOnlyBoundaryVerified: true,
+  authorizationReadVerified: true,
+  sessionReadVerified: true,
+  identityWriteDenied: true,
+  oidcDiscoverySkipped: true,
+  projectListReadVerified: true,
+  projectLockedReadDenied: true,
+  projectWriteDenied: true,
+  releaseLockedReadDenied: true,
+  releaseWriteDenied: true,
+  rollbackWriteDenied: true,
+  missingProjectDenied: true,
+  nativeRootAssemblyVerified: true,
+  singleNativeProviderVerified: true,
+  legacyProviderAbsent: true,
+  providerSwitched: true,
+  runningDatabaseReadOnlyVerified: true,
+  reactHttpVerified: true,
+  vueHttpVerified: true,
+};
+
 function mockDocker(options = {}) {
   const calls = [];
-  const run = (args) => {
+  const events = [];
+  const inputs = [];
+  const run = (args, _showOutput, input) => {
     calls.push(args);
+    if (args.includes("up")) events.push(args.includes("--build") ? "应用启动" : "基础设施启动");
+    if (args.includes("exec")) {
+      events.push("容器烟测");
+      inputs.push(input);
+      return {
+        status: options.probeFailed ? 1 : 0,
+        stdout: options.probeInvalid
+          ? "{}"
+          : JSON.stringify({
+              ...probeOutput,
+              runningDatabaseReadOnlyVerified: !options.runningDatabaseMissing,
+            }),
+      };
+    }
     if (args.includes("config") && options.badConfig) return { status: 1, stdout: "" };
     if (args[0] === "ps" && options.legacy) return { status: 0, stdout: "old-id\n" };
     return { status: 0, stdout: "" };
   };
-  return { run, calls };
+  const verifyDatabase = () => {
+    events.push("严格数据库验证");
+    if (options.invalidDatabase) throw new Error("模拟数据库严格验证失败");
+    return probeInput;
+  };
+  const prepareBinding = (input) => {
+    events.push("只读绑定准备");
+    assert.deepEqual(input, probeInput);
+    if (options.bindingFailed) throw new Error("模拟只读绑定不一致");
+  };
+  const httpsPorts = [];
+  const verifyHttps = (ports) => {
+    events.push("宿主 HTTPS 验证");
+    httpsPorts.push(...ports);
+    if (options.httpsFailed) throw new Error("模拟双端 HTTPS 验证失败");
+  };
+  return { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts, prepareBinding };
 }
 
 void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
+  void it("临时事务探针未单独确认时不调用 Docker 或数据库", () => {
+    const { run, calls, events, verifyDatabase } = mockDocker();
+    for (const args of [[], ["--yes"], ["--confirm-temp-transaction-probe", "--yes"]]) {
+      assert.throws(
+        () =>
+          manageDockerStack(
+            "transaction-probe",
+            env,
+            run,
+            verifyDatabase,
+            undefined,
+            undefined,
+            undefined,
+            args,
+          ),
+        /需要单独明确确认/,
+      );
+    }
+    assert.deepEqual(calls, []);
+    assert.deepEqual(events, []);
+  });
+
+  void it("临时事务探针仅在严格数据库复核后通过固定容器独立执行", () => {
+    const calls = [];
+    const inputs = [];
+    const events = [];
+    const run = (args, showOutput, input, timeout) => {
+      calls.push(args);
+      if (!args.includes("exec")) return { status: 0, stdout: "" };
+      events.push("临时事务探针");
+      assert.equal(showOutput, false);
+      assert.equal(timeout, 80_000);
+      inputs.push(input);
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          status: "DOCKER_NATIVE_TRANSACTION_READY",
+          commitVerified: true,
+          rollbackVerified: true,
+          sameBackendVerified: true,
+          temporaryTableRemoved: true,
+          businessDataWritten: false,
+          providerClosed: true,
+        }),
+      };
+    };
+    const verify = () => {
+      events.push("严格数据库验证");
+      return probeInput;
+    };
+    assert.match(
+      manageDockerStack("transaction-probe", env, run, verify, undefined, undefined, undefined, [
+        "--confirm-temp-transaction-probe",
+      ]),
+      /未写入正式业务表，常驻服务仍为只读/,
+    );
+    assert.deepEqual(events, ["严格数据库验证", "临时事务探针"]);
+    assert.deepEqual(inputs, [JSON.stringify(probeInput)]);
+    const command = calls.find((args) => args.includes("exec"));
+    assert.ok(command);
+    assert.deepEqual(command.slice(-6), [
+      "exec",
+      "-T",
+      "server",
+      "node",
+      "apps/server/container-native-transaction-probe.mjs",
+      "--confirm-temp-transaction-probe",
+    ]);
+    assert.equal(
+      calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")),
+      false,
+    );
+    assert.equal(
+      calls.some((args) => args.join(" ").includes(probeInput.password)),
+      false,
+    );
+  });
+
+  void it("临时事务严格数据库失败或机器报告不完整时停止并保留现场", () => {
+    const { run, calls, verifyDatabase } = mockDocker({ invalidDatabase: true });
+    assert.throws(
+      () =>
+        manageDockerStack(
+          "transaction-probe",
+          env,
+          run,
+          verifyDatabase,
+          undefined,
+          undefined,
+          undefined,
+          ["--confirm-temp-transaction-probe"],
+        ),
+      /数据库严格验证失败/,
+    );
+    assert.equal(
+      calls.some((args) => args.includes("exec")),
+      false,
+    );
+    for (const { status, report, expected } of [
+      {
+        status: 0,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_READY", rollbackVerified: true },
+        expected: { name: "Error", message: "容器原生临时事务探针失败，保留现场" },
+      },
+      {
+        status: 1,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "TRANSACTION" },
+        expected: { name: "Error", message: "容器临时事务提交或回滚验证失败，保留现场" },
+      },
+      {
+        status: 1,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "未知凭据" },
+        expected: { name: "Error", message: "容器原生临时事务探针失败，保留现场" },
+      },
+    ]) {
+      const mockRun = (args) =>
+        args.includes("exec")
+          ? { status, stdout: JSON.stringify(report) }
+          : { status: 0, stdout: "" };
+      assert.throws(
+        () =>
+          manageDockerStack(
+            "transaction-probe",
+            env,
+            mockRun,
+            () => probeInput,
+            undefined,
+            undefined,
+            undefined,
+            ["--confirm-temp-transaction-probe"],
+          ),
+        expected,
+      );
+    }
+  });
+
   void it("允许受控本机业务数据库 adui_scada", () => {
     assert.equal(validateDockerEnv(env), true);
   });
@@ -110,15 +309,264 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     );
   });
 
-  void it("全新安装使用唯一项目及 Compose，不传入卷删除参数", () => {
-    const { run, calls } = mockDocker();
-    assert.match(manageDockerStack("up", env, run), /一个 PostgreSQL/);
-    const args = calls.at(-1);
-    assert.deepEqual(args.slice(-3), ["up", "--build", "-d"]);
-    assert.equal(args[2], "adui-scada");
-    assert.ok(args.includes("deploy/docker/compose.yaml"));
-    assert.equal(args.includes("--remove-orphans"), false);
-    assert.equal(args.includes("-v"), false);
+  void it("七服务一键启动先验证原生数据库再构建应用并执行容器烟测", () => {
+    const { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts, prepareBinding } =
+      mockDocker();
+    assert.match(
+      manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      /容器原生只读及双端 HTTP 验证通过/,
+    );
+    assert.deepEqual(events, [
+      "基础设施启动",
+      "严格数据库验证",
+      "只读绑定准备",
+      "应用启动",
+      "容器烟测",
+      "宿主 HTTPS 验证",
+    ]);
+    assert.deepEqual(httpsPorts, ["18480", "18481"]);
+    const applications = calls.find((args) => args.includes("--build"));
+    assert.ok(applications);
+    assert.deepEqual(applications.slice(-4), ["server", "demo", "web-react", "web-vue"]);
+    assert.equal(applications[2], "adui-scada");
+    assert.ok(applications.includes("deploy/docker/compose.yaml"));
+    assert.ok(applications.includes("--wait"));
+    assert.ok(applications.includes("--no-deps"));
+    assert.equal(
+      calls.some((args) => args.includes("--remove-orphans") || args.includes("-v")),
+      false,
+    );
+    assert.deepEqual(inputs, [JSON.stringify(probeInput)]);
+    assert.equal(
+      calls.some((args) => args.join(" ").includes(probeInput.password)),
+      false,
+    );
+  });
+
+  void it("数据库严格验证失败时不构建或启动应用也不执行初始化", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({
+      invalidDatabase: true,
+    });
+    assert.throws(
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      /数据库严格验证失败/,
+    );
+    assert.deepEqual(events, ["基础设施启动", "严格数据库验证"]);
+    assert.equal(
+      calls.some((args) => args.includes("--build") || args.includes("exec")),
+      false,
+    );
+  });
+
+  void it("只读绑定不一致时拒绝构建或启动应用且不触碰原有资源", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({
+      bindingFailed: true,
+    });
+    assert.throws(
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      /模拟只读绑定不一致/,
+    );
+    assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "只读绑定准备"]);
+    assert.equal(
+      calls.some(
+        (args) =>
+          args.includes("--build") ||
+          args.includes("exec") ||
+          args.includes("down") ||
+          args.includes("rm"),
+      ),
+      false,
+    );
+  });
+
+  void it("容器烟测失败或标志不完整时不能报告启动验收通过", () => {
+    for (const options of [
+      { probeFailed: true },
+      { probeInvalid: true },
+      { runningDatabaseMissing: true },
+    ]) {
+      const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } =
+        mockDocker(options);
+      assert.throws(
+        () =>
+          manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+        /Docker 执行失败|容器原生数据库或双端 HTTP 验证失败/,
+      );
+      assert.deepEqual(events, [
+        "基础设施启动",
+        "严格数据库验证",
+        "只读绑定准备",
+        "应用启动",
+        "容器烟测",
+      ]);
+      assert.equal(
+        calls.some((args) => args.includes("down") || args.includes("rm")),
+        false,
+      );
+    }
+  });
+
+  void it("HTTPS 端口允许根环境显式配置，但拒绝与任何发布端口冲突", () => {
+    const configured = env + "SCADA_REACT_HTTPS_PORT=18482\nSCADA_VUE_HTTPS_PORT=18483\n";
+    const { run, verifyDatabase, verifyHttps, httpsPorts, prepareBinding } = mockDocker();
+    assert.match(
+      manageDockerStack(
+        "up",
+        configured,
+        run,
+        verifyDatabase,
+        verifyHttps,
+        undefined,
+        prepareBinding,
+      ),
+      /宿主 HTTPS 验证通过/,
+    );
+    assert.deepEqual(httpsPorts, ["18482", "18483"]);
+    for (const port of ["18080", "18481", "18443", "15432", "0", "65536"]) {
+      assert.throws(() => validateDockerEnv(env + "SCADA_REACT_HTTPS_PORT=" + port + "\n"), /端口/);
+    }
+  });
+
+  void it("SSE 上游与代理重复禁止缓存指令仍合法，拒绝混入其他缓存策略", () => {
+    assert.equal(hasOnlyNoStore("no-store"), true);
+    assert.equal(hasOnlyNoStore("no-store, no-store"), true);
+    assert.equal(hasOnlyNoStore("No-Store, NO-STORE"), true);
+    for (const value of ["", "public", "no-store, public", "no-store, max-age=60"]) {
+      assert.equal(hasOnlyNoStore(value), false);
+    }
+  });
+
+  void it("宿主 HTTPS 探针失败时不报告成功且不自动清理现场", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({
+      httpsFailed: true,
+    });
+    assert.throws(
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      /双端 HTTPS 验证失败/,
+    );
+    assert.deepEqual(events, [
+      "基础设施启动",
+      "严格数据库验证",
+      "只读绑定准备",
+      "应用启动",
+      "容器烟测",
+      "宿主 HTTPS 验证",
+    ]);
+    assert.equal(
+      calls.some((args) => args.includes("down") || args.includes("rm") || args.includes("-v")),
+      false,
+    );
+  });
+
+  void it("基础设施入口仅启动三项基础设施，不验证或启动业务应用", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    manageDockerStack("infra", env, run, verifyDatabase, verifyHttps);
+    assert.deepEqual(events, ["基础设施启动"]);
+    const args = calls.find((call) => call.includes("up"));
+    assert.ok(args);
+    assert.deepEqual(args.slice(-10), [
+      "up",
+      "-d",
+      "--pull",
+      "never",
+      "--wait",
+      "--wait-timeout",
+      "180",
+      "postgres",
+      "redis",
+      "keycloak",
+    ]);
+    assert.equal(args.includes("--build"), false);
+  });
+
+  void it("Keycloak 探针只验证已启动的七服务，不触发应用启动、数据库或 Web 探针", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    const configured = env.replace(
+      "SCADA_LAB_KEYCLOAK_PORT=18443",
+      "SCADA_LAB_KEYCLOAK_PORT=18444",
+    );
+    let probeCalls = 0;
+    const result = manageDockerStack(
+      "oidc",
+      configured,
+      run,
+      verifyDatabase,
+      verifyHttps,
+      (port, dockerRun, composeArgs) => {
+        probeCalls += 1;
+        assert.equal(port, "18444");
+        assert.equal(dockerRun, run);
+        assert.equal(composeArgs[2], "adui-scada");
+        assert.ok(composeArgs.includes("deploy/docker/compose.yaml"));
+        return "模拟 Keycloak 只读验证通过";
+      },
+    );
+    assert.equal(result, "模拟 Keycloak 只读验证通过");
+    assert.equal(probeCalls, 1);
+    assert.deepEqual(events, []);
+    assert.equal(calls.length, 4);
+    assert.ok(calls[0]?.includes("config"));
+    assert.equal(
+      calls.slice(1).every((args) => args[0] === "ps"),
+      true,
+    );
+  });
+
+  void it("Keycloak 独立探针在配置不安全、旧容器或验证失败时不清理现场", () => {
+    for (const options of [{ badConfig: true }, { legacy: true }]) {
+      const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker(options);
+      assert.throws(
+        () =>
+          manageDockerStack("oidc", env, run, verifyDatabase, verifyHttps, () => {
+            throw new Error("不应调用 Keycloak 探针");
+          }),
+        /Docker 执行失败|禁止自动清理/,
+      );
+      assert.deepEqual(events, []);
+      assert.equal(
+        calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")),
+        false,
+      );
+    }
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    assert.throws(
+      () =>
+        manageDockerStack("oidc", env, run, verifyDatabase, verifyHttps, () => {
+          throw new Error("模拟 Keycloak 验证失败");
+        }),
+      /模拟 Keycloak 验证失败/,
+    );
+    assert.deepEqual(events, []);
+    assert.equal(
+      calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")),
+      false,
+    );
+  });
+
+  void it("Keycloak 只读探针进入运行镜像但不启用正式认证或秘密环境", () => {
+    const dockerfile = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/Dockerfile.server", import.meta.url)),
+      "utf8",
+    );
+    assert.ok(
+      dockerfile.includes(
+        "container-oidc-discovery.mjs /workspace/apps/server/container-oidc-discovery.mjs",
+      ),
+    );
+    assert.ok(dockerfile.includes('CMD ["node", "apps/server/dist/main.js"]'));
+    const compose = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    const server = compose.slice(compose.indexOf("\n  server:"), compose.indexOf("\n  demo:"));
+    assert.match(server, /SCADA_OIDC_ENABLED: "false"/);
+    assert.doesNotMatch(
+      server,
+      /NODE_TLS_REJECT_UNAUTHORIZED|SCADA_OIDC_CLIENT_SECRET|SCADA_DATABASE_URL/,
+    );
   });
 
   void it("日常停止、状态及日志只管理 adui-scada", () => {
@@ -158,6 +606,52 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     }
     assert.doesNotMatch(source, /postgres-dev:|legacy-db|external: true/);
     assert.equal((source.match(/^  postgres:$/gm) ?? []).length, 1);
+  });
+
+  void it("常驻容器只使用独立只读绑定且不开放 OIDC，原生烟测仍保留", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    const server = source.slice(source.indexOf("\n  server:"), source.indexOf("\n  demo:"));
+    assert.match(server, /SCADA_OIDC_ENABLED: "false"/);
+    assert.match(server, /SCADA_LOCAL_DEMO_API_ENABLED: "false"/);
+    assert.match(server, /SCADA_DOCKER_DB_READONLY: "true"/);
+    assert.ok(server.includes("source: ../../.local/docker-runtime/server-database.json"));
+    assert.ok(server.includes("target: /run/secrets/adui-scada-server-database.json"));
+    assert.match(server, /read_only: true/);
+    assert.match(server, /create_host_path: false/);
+    assert.ok(server.includes("/health/database"));
+    assert.match(server, /networks:\s*\n\s*- app[\s\S]*\n\s*- lab/);
+    assert.doesNotMatch(server, /SCADA_DATABASE_URL|SCADA_LAB_DB_PASSWORD|ports:/);
+    const dockerfile = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/Dockerfile.server", import.meta.url)),
+      "utf8",
+    );
+    assert.match(dockerfile, /container-prisma8-smoke\.mjs/);
+    assert.match(dockerfile, /prisma8-provider-smoke\.mjs/);
+    assert.match(dockerfile, /prisma8-fresh-runtime-probe\.mjs/);
+  });
+
+  void it("双端 HTTPS 只发布回环端口及只读证书文件，不开放受保护接口", () => {
+    const compose = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    assert.ok(compose.includes("127.0.0.1:${SCADA_REACT_HTTPS_PORT:-18480}:8443"));
+    assert.ok(compose.includes("127.0.0.1:${SCADA_VUE_HTTPS_PORT:-18481}:8443"));
+    const web = compose.slice(compose.indexOf("\n  web-react:"), compose.indexOf("\n  server:"));
+    assert.equal((web.match(/localhost\.pem:ro/g) ?? []).length, 2);
+    assert.equal((web.match(/localhost-key\.pem:ro/g) ?? []).length, 2);
+    assert.doesNotMatch(web, /secrets\.env|SCADA_LAB_DB_PASSWORD|SCADA_LAB_CLIENT_SECRET/);
+    const nginx = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/nginx.conf", import.meta.url)),
+      "utf8",
+    );
+    assert.match(nginx, /listen 8080;/);
+    assert.match(nginx, /listen 8443 ssl;/);
+    assert.match(nginx, /ssl_protocols TLSv1\.2 TLSv1\.3;/);
+    assert.ok(nginx.includes("location ^~ /api/ { return 404; }"));
   });
 
   void it("新存储卷由项目自身创建，不引用旧物理卷", () => {

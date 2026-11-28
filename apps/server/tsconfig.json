@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
+    "resolveJsonModule": true,
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config*.ts"],

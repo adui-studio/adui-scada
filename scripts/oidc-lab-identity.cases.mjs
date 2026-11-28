@@ -57,8 +57,8 @@ function fakeDatabase(options = {}) {
       if (options.failOn && query.includes(options.failOn)) {
         throw new Error("模拟数据库异常，不能原样输出敏感参数");
       }
-      if (query.includes('public."_prisma_migrations"')) {
-        return { rows: options.noMigration ? [] : [{ "?column?": 1 }] };
+      if (query.includes("prisma_contract.marker")) {
+        return { rows: options.noMarker ? [] : [{ "?column?": 1 }] };
       }
       if (query.includes("FROM public.scada_external_identities WHERE issuer")) {
         return {
@@ -178,25 +178,31 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
     );
   });
 
-  void it("隔离数据库未完成 OIDC 迁移时拒绝预览和写入", async () => {
-    const fake = fakeDatabase({ noMigration: true });
-    await assert.rejects(
-      () =>
-        reconcileLabIdentity(
-          fake.client,
-          resolveLabIdentityTarget(env()),
-          parseLabIdentityArgs(applyArguments),
-        ),
-      /缺少已完成/,
-    );
-    assert.equal(
-      fake.calls.some((call) => call.query === "ROLLBACK"),
-      true,
-    );
-    assert.equal(
-      fake.calls.some((call) => call.query.includes("INSERT")),
-      false,
-    );
+  void it("本机业务库缺少原生标记时拒绝预览和写入", async () => {
+    for (const args of [baseArguments, applyArguments]) {
+      const fake = fakeDatabase({ noMarker: true });
+      await assert.rejects(
+        () =>
+          reconcileLabIdentity(
+            fake.client,
+            resolveLabIdentityTarget(env()),
+            parseLabIdentityArgs(args),
+          ),
+        { message: "本机业务库未通过 Prisma 8 原生存储标记验证" },
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query === "ROLLBACK"),
+        true,
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query.includes("INSERT")),
+        false,
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query === "COMMIT"),
+        false,
+      );
+    }
   });
 
   void it("默认预览只读核对且总是回滚", async () => {

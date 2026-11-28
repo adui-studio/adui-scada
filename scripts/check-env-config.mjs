@@ -32,6 +32,8 @@ const defaults = {
   SCADA_DEMO_PORT: "14178",
   SCADA_REACT_PORT: "18080",
   SCADA_VUE_PORT: "18081",
+  SCADA_REACT_HTTPS_PORT: "18480",
+  SCADA_VUE_HTTPS_PORT: "18481",
   SCADA_DB_HOST: "127.0.0.1",
   SCADA_DB_PORT: "15432",
   SCADA_DB_NAME: "adui_scada",
@@ -194,6 +196,8 @@ assert.ok(compose.includes("name: adui-scada\n"), "唯一 Docker Compose 项目�
 for (const [key, fallback] of [
   ["SCADA_REACT_PORT", defaults.SCADA_REACT_PORT],
   ["SCADA_VUE_PORT", defaults.SCADA_VUE_PORT],
+  ["SCADA_REACT_HTTPS_PORT", defaults.SCADA_REACT_HTTPS_PORT],
+  ["SCADA_VUE_HTTPS_PORT", defaults.SCADA_VUE_HTTPS_PORT],
   ["SCADA_SERVER_PORT", defaults.SCADA_SERVER_PORT],
   ["SCADA_DEMO_PORT", defaults.SCADA_DEMO_PORT],
   ["SCADA_LAB_POSTGRES_PORT", defaults.SCADA_LAB_POSTGRES_PORT],
@@ -235,7 +239,7 @@ for (const old of [
 ]) {
   assert.ok(!existsSync(resolve(root, old)), "请移除旧版 Docker 入口：" + old);
 }
-for (const action of ["plan", "up", "down", "ps", "logs"]) {
+for (const action of ["plan", "down", "ps", "logs"]) {
   assert.ok(
     packageScripts["docker:" + action]?.includes("docker-stack.mjs " + action),
     "缺少最新 Docker 命令：" + action,
@@ -243,16 +247,17 @@ for (const action of ["plan", "up", "down", "ps", "logs"]) {
 }
 assert.ok(!packageScripts["docker:migrate"], "全新安装不得保留旧容器迁移入口");
 assert.ok(
-  packageScripts["docker:up"]?.includes("node scripts/init-docker-db.mjs"),
-  "首次 Docker 启动必须执行 Prisma migrate deploy",
+  packageScripts["docker:up"]?.endsWith("node scripts/docker-stack.mjs up") &&
+    packageScripts["docker:infra"]?.endsWith("node scripts/docker-stack.mjs infra"),
+  "Docker 全应用与基础设施入口必须分别使用受控启动命令",
 );
 assert.ok(
-  packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs",
-  "缺少安全的数据库迁移重试命令",
+  packageScripts["docker:db:init"] === "node apps/server/prisma8-fresh-install.mjs",
+  "缺少受控的全新数据库初始化入口",
 );
 assert.equal(
   packageScripts["docker:db:status"],
-  "node scripts/init-docker-db.mjs --status",
+  "node apps/server/prisma8-fresh-install.mjs --status",
   "Docker 数据库状态查询必须复用本机随机凭据及只读 Prisma 命令",
 );
 assert.ok(
@@ -265,6 +270,94 @@ assert.ok(
 );
 assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-discovery.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-transport.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-runtime-binding.cases.mjs"));
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-native-transaction-probe.cases.mjs"),
+);
+assert.equal(
+  packageScripts["docker:db:transaction:probe"],
+  "node scripts/docker-stack.mjs transaction-probe",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:transaction:probe"),
+  "真实临时事务探针必须单独确认",
+);
+assert.ok(
+  !packageScripts["docker:up"].includes("transaction-probe"),
+  "常驻启动不得自动执行临时事务",
+);
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-review.cases.mjs"));
+assert.equal(
+  packageScripts["docker:db:role:review"],
+  "node apps/server/prisma8-fresh-install.mjs --role-review",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:review") &&
+    !packageScripts["docker:up"].includes("role-review"),
+  "真实数据库角色核查必须独立执行",
+);
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-db-role-bootstrap-plan.cases.mjs"),
+);
+assert.equal(
+  packageScripts["docker:db:role:plan"],
+  "node apps/server/prisma8-fresh-install.mjs --role-plan",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:plan") &&
+    !packageScripts["docker:up"].includes("role-plan"),
+  "真实角色准备预览必须独立执行",
+);
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-bootstrap.cases.mjs"));
+assert.equal(
+  packageScripts["docker:db:role:bootstrap"],
+  "node apps/server/prisma8-fresh-install.mjs --role-bootstrap",
+);
+assert.equal(
+  packageScripts["docker:db:role:bootstrap:status"],
+  "node apps/server/prisma8-fresh-install.mjs --role-bootstrap-status",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:bootstrap") &&
+    !packageScripts["docker:up"].includes("role-bootstrap"),
+  "真实角色准备事务及状态核查必须独立执行",
+);
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-isolation.cases.mjs"));
+assert.equal(
+  packageScripts["docker:db:role:isolation:inspect"],
+  "node apps/server/prisma8-fresh-install.mjs --role-isolation-inspect",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:isolation:inspect") &&
+    !packageScripts["docker:up"].includes("role-isolation-inspect"),
+  "真实全集群权限核查必须独立执行",
+);
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-db-role-isolation-plan.cases.mjs"),
+);
+assert.equal(
+  packageScripts["docker:db:role:isolation:plan"],
+  "node apps/server/prisma8-fresh-install.mjs --role-isolation-plan",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:isolation:plan") &&
+    !packageScripts["docker:up"].includes("role-isolation-plan"),
+  "真实隔离变更预览必须独立执行",
+);
+assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
+assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
+assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));
+assert.equal(
+  packageScripts["docker:oidc:probe"],
+  "node scripts/docker-stack.mjs oidc",
+  "Keycloak 真实只读探针必须使用受控本机 Docker 入口",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:oidc:probe"),
+  "真实 Keycloak 探针不得进入离线质量链",
+);
 for (const key of Object.keys(packageScripts)) {
   assert.ok(
     !/^docker:(demo|lab|all):/.test(key) && !key.startsWith("db:dev:"),
@@ -285,6 +378,8 @@ const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);
 assert.match(ignore, /^\.env\.\*$/m);
 assert.ok(ignore.includes(".local/docker/"), "本机随机凭据必须被 Git 忽略");
+assert.ok(ignore.includes(".local/docker-runtime/"), "常驻数据库绑定必须被 Git 忽略");
+assert.ok(read(".dockerignore").includes(".local/docker-runtime/"), "常驻数据库绑定不得进入镜像");
 assert.match(ignore, /^!\.env\.example$/m);
 assert.match(read(".dockerignore"), /^\.env$/m);
 assert.ok(

@@ -2988,9 +2988,7 @@ async function importJsonFile(file: File | undefined) {
         <div class="studio-inspector-content" :hidden="inspectorTab !== 'properties'">
           <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
           <template v-if="selected">
-            <p>
-              <strong>{{ selected.id }}</strong> · {{ selected.type }}
-            </p>
+            <p><strong>{{ selected.id }}</strong> · {{ selected.type }}</p>
             <h3 class="studio-property-section-title">位置与尺寸</h3>
             <form
               v-if="state.selectedIds.length === 1"

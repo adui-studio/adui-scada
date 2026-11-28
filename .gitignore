@@ -16,6 +16,7 @@ dist-ssr
 # 最新 Docker 凭据与 TLS 私钥
 .local/oidc-lab/
 .local/docker/
+.local/docker-runtime/
 
 # 环境变量文件
 .env
@@ -51,3 +52,5 @@ apps/desktop/src-tauri/gen/
 
 # Prisma Client 7 生成物由 prisma generate 重建，不提交到 Git。
 apps/server/src/generated/prisma/
+# 原生 Prisma 8 运行时契约由固定官方入口离线生成。
+apps/server/src/generated/prisma8-runtime/

@@ -27,12 +27,9 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
-import {
-  PrismaProjectVersionStore,
-  ProjectRequestValidationError,
-} from "./prisma-project-version-store.js";
+import { ProjectVersionStore, ProjectRequestValidationError } from "./project-version-store.js";
 import { ProjectApiExceptionFilter } from "./project-api.exception-filter.js";
-import { PrismaProjectReleaseStore } from "./prisma-project-release-store.js";
+import { ProjectReleaseStore } from "./project-release-store.js";
 
 /** 仅在 OIDC 显式启用的根模块中注册；所有写入均经过会话、CSRF 与工程 ACL。 */
 @ApiTags("工程管理")
@@ -41,8 +38,8 @@ import { PrismaProjectReleaseStore } from "./prisma-project-release-store.js";
 @UseFilters(ProjectApiExceptionFilter)
 export class ProjectApiController {
   constructor(
-    private readonly projects: PrismaProjectVersionStore,
-    private readonly releases: PrismaProjectReleaseStore,
+    private readonly projects: ProjectVersionStore,
+    private readonly releases: ProjectReleaseStore,
   ) {}
 
   @Post()

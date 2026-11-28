@@ -1,7 +1,15 @@
 /** 共享 Oxfmt 格式化配置；根目录 .editorconfig 是编辑器统一规范。 */
 export const sharedFormat = {
   // 第三方 Skill 文档由提供方维护，格式化范围仅包含项目自身代码。
-  ignorePatterns: [".agents/skills/**", "apps/server/src/generated/prisma/**"],
+  ignorePatterns: [
+    ".agents/skills/**",
+    "apps/server/src/generated/prisma/**",
+    "apps/server/src/generated/prisma8/**",
+    "apps/server/src/generated/prisma8-runtime/**",
+    "apps/server/.artifacts/prisma8-native-baseline-comments/**",
+    "apps/server/.artifacts/prisma8-native-repro-candidate/**",
+    "apps/server/.artifacts/prisma8-native-check-repair-package/**",
+  ],
   printWidth: 100,
   tabWidth: 2,
   useTabs: false,

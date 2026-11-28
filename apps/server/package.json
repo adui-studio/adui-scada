@@ -6,18 +6,14 @@
   "scripts": {
     "build": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && nest build",
     "typecheck": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && tsc --noEmit -p tsconfig.json",
-    "start": "pnpm --filter @adui/scada-core run build:node && nest start",
+    "start": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && nest start",
     "start:dev": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && nest start --watch",
     "start:prod": "node dist/main.js",
     "test": "vp test run --config vitest.config.ts",
     "test:watch": "vp test --config vitest.config.ts",
     "test:e2e": "vp test run --config vitest.config.e2e.ts",
-    "db:validate": "prisma validate --config prisma.config.ts",
-    "db:generate": "prisma generate --config prisma.config.ts",
-    "db:migrate:dev": "prisma migrate dev --config prisma.config.ts",
-    "db:migrate:deploy": "prisma migrate deploy --config prisma.config.ts",
-    "db:migrate:status": "prisma migrate status --config prisma.config.ts",
-    "test:db": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && vp test run --config vitest.config.db.ts"
+    "db:generate": "node prisma8-fresh-install.mjs --runtime-emit",
+    "db:prisma8:emit": "pnpm run db:generate"
   },
   "dependencies": {
     "@adui/scada-core": "workspace:*",
@@ -27,8 +23,7 @@
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
-    "@prisma/adapter-pg": "catalog:",
-    "@prisma/client": "catalog:",
+    "@prisma/orm-postgres": "catalog:",
     "helmet": "catalog:",
     "nestjs-pino": "catalog:",
     "openid-client": "catalog:",

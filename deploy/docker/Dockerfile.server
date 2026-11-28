@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
-# 仅包含 NestJS 进程存活检查的最小容器，不是生产 SCADA API。
-FROM node:24.22.2-bookworm AS build
+# 本机 Docker 应用及显式原生只读烟测镜像，尚未开放生产 OIDC。
+FROM node:24.18.0-bookworm AS build
 WORKDIR /workspace
-RUN npm install --global pnpm@12.18.0
+RUN npm install --global pnpm@12.23.0
 COPY . .
 RUN pnpm install --frozen-lockfile \
     && pnpm --filter @adui/scada-server run build
 
-FROM node:24.22.2-bookworm-slim
+FROM node:24.18.0-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /workspace
 # pnpm Workspace 符号链接指向根目录 .pnpm 存储，因此需要复制两级依赖。
@@ -17,6 +17,14 @@ COPY --from=build --chown=node:node /workspace/apps/server/dist/ /workspace/apps
 COPY --from=build --chown=node:node /workspace/apps/server/package.json /workspace/apps/server/package.json
 # 隔离烟测脚本仅在显式执行 test:docker:server 时运行。
 COPY --from=build --chown=node:node /workspace/apps/server/container-smoke.mjs /workspace/apps/server/container-smoke.mjs
+# 容器原生只读烟测与宿主烟测共用同一个正式根模块验证实现。
+COPY --from=build --chown=node:node /workspace/apps/server/container-prisma8-smoke.mjs /workspace/apps/server/container-prisma8-smoke.mjs
+# 仅供维护者单独确认的原生临时表事务验收，不进入常驻启动。
+COPY --from=build --chown=node:node /workspace/apps/server/container-native-transaction-probe.mjs /workspace/apps/server/container-native-transaction-probe.mjs
+# 仅供显式 Keycloak Discovery/JWKS 只读验收，不在 HTTP 服务启动时执行。
+COPY --from=build --chown=node:node /workspace/apps/server/container-oidc-discovery.mjs /workspace/apps/server/container-oidc-discovery.mjs
+COPY --from=build --chown=node:node /workspace/apps/server/prisma8-provider-smoke.mjs /workspace/apps/server/prisma8-provider-smoke.mjs
+COPY --from=build --chown=node:node /workspace/scripts/prisma8-fresh-runtime-probe.mjs /workspace/scripts/prisma8-fresh-runtime-probe.mjs
 # Linux SIGTERM 回归专用回环探针，仅在 test:docker:server 中执行。
 COPY --from=build --chown=node:node /workspace/apps/server/container-signal-probe.mjs /workspace/apps/server/container-signal-probe.mjs
 # 服务端运行时引用 Core 编译后的 JS，不依赖对 TypeScript 源码的运行时类型擦除。

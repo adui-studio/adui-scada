@@ -1,5 +1,9 @@
 # ADui SCADA · Harness
 
+> 2026-11-27 原生收敛： 旧 Prisma 7 迁移、旧库 `test:db` 与 Prisma 8 历史候选实验命令不再执行。Windows 先 `pnpm install --lockfile-only`，再 `pnpm install --frozen-lockfile`；运行 `pnpm run db:generate`、`pnpm run test:prisma8:fresh`、`pnpm run test:prisma8:cli`、`pnpm run test:docker:db`、`pnpm run test:oidc:identity`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check --fix`、`pnpm run ready`，最后 `pnpm run db:prisma8:fresh:provider:smoke`。已有业务库不得重复初始化、清理或迁移。依赖旧迁移表的发布夹具准备命令已停用，后续用原生契约和明确授权重建。
+
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **AI 编码前必读门禁**：每次修改任何代码前，先阅读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文，再检查目标代码、适用 Skills 与测试。发现重复错误应先对照错误编号排查，复验后再将新案例写入清单；命令未实际执行不能登记为通过。
 
 V0.1 使用 Vite+ 1.5.0、pnpm workspace Catalog、TypeScript 6.0.3、Vite+ 内置 Vitest。编辑规范来自根 `.editorconfig`，`@adui/tooling` 导出 Format / Lint 供根 Vite+ 使用；应用 TypeScript 统一引用 `@adui/tsconfig/*`。
@@ -4523,3 +4527,1284 @@ pnpm run lab:alarm
 仅在本测试模式的 Vue 双标签导航开始前，分别调用官方 CDP `Network.enable` 和 `Network.setCacheDisabled({cacheDisabled:true})`，使两页的网络请求不使用 HTTP 缓存。它不等于清空浏览器用户文件、关闭 HTTPS、禁止 IndexedDB/CacheStorage 或影响真实浏览器产品行为；脚本仍会执行全部双标签广播、离线修订冲突、墓碑重建及 IndexedDB 异常恢复测试。任何 CDP 命令失败均原样退出，不可静默跳过。
 
 官方接口：https://chromedevtools.github.io/devtools-protocol/tot/Network/#method-setCacheDisabled 。该行为只在维护者 Windows 新 HEAD 复验成功后才能记为验证通过；若持续失败，转向临时 Profile 目录权限、磁盘空间、受控安全软件等本机环境问题，禁止删除非本任务用户数据。
+
+## Prisma 8 渐进迁移 · 第一阶段离线生成
+
+本阶段的 `pnpm run db:prisma8:emit` 只调用 Prisma 8 Contract 生成器，不读取数据库连接。旧版生成、校验和迁移仍由 `prisma7` 与 `apps/server/prisma7.config.ts` 执行。历史文档中的直接 `prisma migrate` 命令是旧版本记录，不得在当前双版本分支使用普通 prisma 命令替代。数据库接管尚未授权，禁止执行 Prisma 8 的 db sign、db migrate、db update 或迁移计划落地。
+
+首次安装后先检查两套 CLI 版本、旧版 Schema 校验和 Client 生成、新版 Contract 生成，再运行现有 ready。新增的脚本解析测试包含于 test:docker:db，不访问数据库。所有真实迁移测试继续使用既有隔离数据库安全模板；不得因 ORM 升级省略隔离目标、失败记录检查或备份。
+
+## Prisma 8 阶段二 · 本机隔离库只读探针（候选）
+
+先执行既有完整质量链，随后在已存在且已完成既有迁移、无并发写入的 15432 端口 adui_scada_test 上单独执行下列只读专项。不要启动新版 Docker 镜像或执行任何数据库迁移。仅设置探针使用的测试 URL，执行后恢复原环境；不使用 SCADA_DATABASE_URL，不输出凭据。
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    if (-not $env:SCADA_TEST_DATABASE_URL) {
+        $env:SCADA_TEST_DATABASE_URL = Read-Host "输入本机 15432 端口 adui_scada_test 的连接地址" -MaskInput
+    }
+    pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-readonly.db-spec.ts
+    if ($LASTEXITCODE -ne 0) { throw "Prisma 8 只读专项失败" }
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+}
+```
+
+探针自身在创建连接池前拒绝非指定目标及异常参数，并核验实际库名与事务只读状态。已有工程样本比对通过与空库结果分别打印固定中文说明。空库只能确认缺失作用域查询，不能据此切换业务仓储。若提示契约、只读连接或运行时错误，先定位；禁止使用宽松模式或 db sign 等有写入副作用的命令绕过验收。
+
+### Prisma 8 Skills 同步和历史只读专项
+
+在仓库根目录执行 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 和 `pnpm run db:prisma8:emit`。三个命令统一由 `scripts/prisma8-cli.mjs` 从仓库根目录启动服务端已安装的 Prisma 8 CLI，按固定 CLI 语法先传命令路径，再传 `--config` 与原服务端配置路径；首次验收先运行 `pnpm run db:prisma8:skills:list` 确认解析成功，再同步并复查；只同步根 `.agents/skills/`，保留过期检查。禁止再次直接从服务端工作区执行 Skills 同步；若已有重复副本，仅备份迁出各旧 Agent 的 skills 目录下 `prisma-8`、`prisma-platform-core-concepts`、`prisma-composer-core-concepts` 三个已知目录（若存在），确认 Git 无跟踪文件，且不删除其他配置。当前 CLI 在仓库根仅识别两项已同步的 Prisma 8 包内技能，自动移除孤立的 Composer 技能属预期行为，仓库移除相应旧跟踪文件。运行 `pnpm run config:check` 验证入口及旧副本不存在，并运行 `pnpm run test:prisma8:cli` 检查根工作目录、固定配置、命令边界及退出码转发（已纳入 ready）。Windows HEAD e281d595 已实际通过旧副本备份迁出、根目录 CLI 列表及同步、共享配置检查和两版 Prisma 生成；随后 Vite+ 482 个格式文件、324 个受检文件零警告错误。维护者后续提交 ff92a981 保留两项根 Skills 与格式化成果。复验先执行 messages:check、test:prisma8:cli，再验证两版生成、Core 构建、完整 ready 和隔离库只读专项。
+
+仅使用已准备且已应用对应迁移的本机 15432 端口 `adui_scada_test` 隔离库。运行期间停止其他写入，不创建历史样本。PowerShell 临时设置专项连接地址，不覆盖生产连接地址：
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    if (-not $env:SCADA_TEST_DATABASE_URL) {
+        $env:SCADA_TEST_DATABASE_URL = Read-Host "输入本机 15432 端口 adui_scada_test 连接地址" -MaskInput
+    }
+    pnpm run test:db:prisma8:readonly
+    if ($LASTEXITCODE -ne 0) { throw "Prisma 8 只读专项失败" }
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+}
+```
+
+已有工程和历史样本均对照成功方可确认正向读取；EMPTY 不计为正向通过。缺表或连接失败应保留日志，不执行签名、迁移、清库或重建容器。
+
+### Prisma 7 / 8 历史归档非空三方对照（PR #202）
+
+维护者已于 2026-11-25 明确授权仅在本机 15432 端口的 `adui_scada_test` 执行随机合成夹具测试。原 `test:db:prisma8:readonly` 仍严格只读，不自动创建历史。新增 `pnpm run test:db:prisma8:history:compare` 单独运行 `apps/server/test/prisma8-history-compare.db-spec.ts`；它也属于本机真实数据库 test:db 套件，不进入 ready 或 test:unit。
+
+前置条件：当前分支的 Core Node 产物、Prisma 7 Client 和 Prisma 8 Contract 已生成，八项 Prisma 7 增量迁移均已应用至隔离库；不要再次迁移、签名或重建容器。显式设置 SCADA_TEST_DATABASE_URL，禁止回退至 SCADA_DATABASE_URL，禁止将凭据作为 Read-Host 提示或输出完整 URL。根目录执行：
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    $password = Read-Host "请输入隔离数据库密码" -MaskInput
+    if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+    $encodedPassword = [Uri]::EscapeDataString($password)
+    $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+    pnpm run test:db:prisma8:history:compare
+    if ($LASTEXITCODE -ne 0) { throw "历史非空三方对照失败，禁止自动重试" }
+    Write-Host "历史非空三方对照退出码：0"
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+    Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+}
+```
+
+测试先校验实际连接的数据库名、public Schema、读写/只读状态与两张历史表及查询索引。Prisma 7 创建三个随机专用工程（两个租户），使用正式归档仓储写入五批共十个合成点；Prisma 8 和原生 SQL 只使用受控只读 pg 池。十一组窗口/租户/工程/Tag 查询及超量门禁必须逐项满足独立预期；只有非空严格对照、精确联合主键事务清理、零残留与资源关闭都通过才返回 MATCHED。创建结果或清理未确认时返回固定脱敏诊断及本次随机测试标识，禁止自动删除不确定归属的工程或自动重试；异常终止可能留下专用夹具，需要单独只读审查。所有代码仍只用于隔离测试，不注册 HTTP 或生产模块，不进行真实设备采集。
+
+### Prisma 8 历史归档写入候选专项
+
+前置：已应用八项 Prisma 7 迁移的本机 127.0.0.1:15432/adui_scada_test；两版生成物及 Core Node 构建需与当前分支一致。新增 `pnpm run test:db:prisma8:history:write`，单独执行真实写入专项，默认 test:db 也包含该测试，ready 不运行数据库写入。先执行 db:validate、db:generate、db:prisma8:emit、build:core、vp check、messages:check、typecheck:server 和 docs:check，再执行五项候选单测与完整 ready。仅在已授权的隔离库运行，测试期间不得启动其他写入任务；不执行迁移、重置、签名或重建容器。
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    $password = Read-Host "请输入隔离数据库密码" -MaskInput
+    if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+    $encodedPassword = [Uri]::EscapeDataString($password)
+    $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+    pnpm run test:db:prisma8:history:write
+    if ($LASTEXITCODE -ne 0) { throw "历史写入事务专项失败，禁止自动重试" }
+    Write-Host "历史写入事务专项退出码：0"
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+    Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+}
+```
+
+测试先核对写入端与只读端实际数据库和 Schema、历史表/索引。仅创建本次三个随机联合工程键；首次写入、双版本重放、同内容跨版本并发、不同内容新版并发、复合外键 SQLSTATE 23503、只读池拒绝、同事务故意重复明细 SQLSTATE 23505、回滚后零批次/明细及再次正常提交、跨租户/工程隔离全部必须符合预期。回滚专项在真实候选事务步骤返回暂定状态后引入同一随机批次重复明细，不修改表、触发器或旧业务数据。所有竞争请求必须 settle 后才清理；清理事务仅针对确认创建的三个联合工程键，按明细、批次、工程顺序删除并核对零残留。创建/清理结果不明、进程异常终止或任何专项失败不得自动重试，先核查；诊断不输出第三方异常、凭据或业务数据。
+
+### Prisma 8 工程版本真实事务专项
+
+在已完成 Prisma 7 客户端生成、Prisma 8 Contract 生成及 Core 构建的前提下，使用上节历史写入专项同样的隔离数据库 URL 安全门禁与 try/finally 恢复环境变量流程，将专项命令替换为 `pnpm run test:db:prisma8:project:version`。仅允许显式配置 SCADA_TEST_DATABASE_URL 指向本机 15432/adui_scada_test；必须已应用现有迁移，不新增迁移、不签名、不访问正式库。测试在写入前核验连接及工程表结构，创建两个随机租户的主体与同工程 ID 夹具，按复合键清理已确认夹具并核对零残留；创建或清理结果不明时不自动重试或扩大清理范围。验证失败只输出固定阶段与必要随机测试标识。新专项不纳入 ready，需单独运行。
+
+### Prisma 8 工程查询真实数据库专项
+
+完成两版 Prisma 生成及 Core 构建后，沿用前述显式本机隔离数据库 URL 与 try/finally 环境变量恢复方式，执行 `pnpm run test:db:prisma8:project:query`。连接目标须为 127.0.0.1:15432/adui_scada_test，现有八项迁移已应用；不需要新迁移、标记签名或重建数据库。查询候选使用普通 ReadCommitted 事务取得共享行锁，不执行 DML；测试本身会写入随机身份和工程夹具，短暂篡改专用版本摘要、撤销专用权限，并按确认创建的精确联合键清理、核对零残留。不要用于业务库或生产库。失败或创建/清理结果不明时先核查，禁止自动重试、扩大删除范围。该专项不纳入 ready，必须单独执行。
+
+### Prisma 8 发布候选真实数据库专项与增量验收
+
+本批新增 `pnpm run test:db:prisma8:project:release`，沿用既有显式 SCADA_TEST_DATABASE_URL 本机 15432/adui_scada_test 门禁与 PowerShell try/finally 恢复环境变量流程。只允许在已迁移隔离库中创建随机身份、会话和工程。仅测试代码注入门禁以覆盖发布事务成功与指针 CAS 故障；正式门禁始终拒绝，不改生产 Provider、不签名或执行迁移。清理按精确联合工程键、已确认会话及主体键进行；结果不明不自动重试。
+
+维护者 2026-11-25 明确调整验收频率：日常批次执行适用的 vp check、独立类型、中文文案、文档、受影响单测与真实专项；不要求每个小 PR 重复执行完整 ready。完整 ready 保留在阶段集成、跨模块重大变更及 MVP 最终验收；已有门禁脚本和工业安全要求不降级。
+
+### Prisma 8 身份会话真实数据库专项
+
+沿用已生成两版 Prisma 契约、已应用八项迁移的本机隔离库及既有显式 SCADA_TEST_DATABASE_URL / PowerShell try/finally 恢复流程，执行 `pnpm run test:db:prisma8:auth:session`。测试核验实际连接与身份、映射、会话表，创建两个随机租户及专用绑定与会话；校验双版本互认、摘要与时效、CSRF、并发撤销及停用拒绝，只清理已确认的精确会话和映射/主体键，核对零残留。创建或清理不明确时先核查，不自动重试。诊断不打印会话令牌、摘要、密码或第三方异常。该专项独立运行，不纳入日常 ready；本批执行增量质量与相关认证回归，不新增迁移、不签名、不重建容器。
+
+### Prisma 8 OIDC 登录事务真实数据库专项
+
+在现有 Prisma 7 Client、Prisma 8 Contract 和 Core 构建产物齐备且本机隔离库八项既有迁移已应用的前提下，沿用前述屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL、127.0.0.1:15432/adui_scada_test、try/finally 恢复环境变量的完整 PowerShell 流程，将专项命令替换为 `pnpm run test:db:prisma8:auth:oidc`。测试使用两个随机专用 Issuer、随机合成密钥及本地 Discovery 元数据；先核验 OIDC 迁移、表与索引，禁止真实 IdP 网络请求。验证双版本加密事务互认、一次性竞争、过期及篡改拒绝和专用 Issuer 128 条分批清理；结束仅删除已确认的 Issuer/State 摘要联合条件对应记录并核对零残留。创建/清理结果不明时禁止自动重试或扩大删除范围，错误仅输出固定阶段与必要随机测试标识。不执行迁移、签名、依赖安装或容器重建；日常验收执行适用增量检查，不要求重复完整 ready。
+
+### Prisma 8 工程 ACL Guard 真实数据库专项
+
+沿用现有两版 Prisma 生成产物、Core 构建及已经应用八项迁移的本机隔离库，通过屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL（127.0.0.1:15432/adui_scada_test）、try/finally 恢复环境变量流程运行 `pnpm run test:db:prisma8:project:acl`。专项先核验实际数据库、Schema、表、索引及 release:read 迁移；只对随机合成身份、会话、工程和授权进行测试，前置 Guard 仅执行查询。受控撤权限定已创建专用工程和两条授权复合条件，并先取得工程排他锁，不新增授权管理接口。校验两版 Guard 和仓储拒绝及无额外状态变化，按外键依赖顺序清理已确认的精确工程、会话及身份键，核对零残留。创建或清理结果不明时禁止自动重试；不执行迁移、签名、依赖安装、容器重建或生产发布。本批只执行增量质量、关联身份/权限策略单测与新增真实数据库专项。
+
+### Prisma 8 迁移接管只读专项
+
+先执行 `pnpm run db:prisma8:emit` 确认固定生成契约，再执行 `pnpm run test:prisma8:cli` 与 `pnpm run test:prisma8:migration:preflight`、Vite+、中文文案、文档检查。新增离线测试纳入未来阶段完整 ready，但真实预检保持人工独立运行。
+
+使用前述屏蔽密码、显式 SCADA_TEST_DATABASE_URL 指向 127.0.0.1:15432/adui_scada_test 及 try/finally 环境恢复流程执行 `pnpm run db:prisma8:migration:preflight`。禁止使用业务库 URL 或根 .env；连接默认只读，REPEATABLE READ READ ONLY 快照内核对历史迁移、实际标记和系统目录，最终 ROLLBACK 并关闭。无需创建夹具，不读取业务行；输出固定统计、Contract 存储哈希及目录定义指纹。现有标记、迁移校验和不匹配、异常登记、缺失或弱化约束均停止，不自动修复或重试。即使退出码 0，REVIEW_REQUIRED 也不授予签名或迁移许可。下一批须按 ADR-0072 评审原生约束保留及独立参考库方案。
+
+### Prisma 8 原生约束保留与独立参考库目录对照
+
+先执行 `pnpm run db:prisma8:emit`、`pnpm run test:prisma8:cli`、`pnpm run test:prisma8:migration:preflight`（现有九项和新增六项，共十五项），然后执行 Vite+、中文文案和文档检查。原 `db:prisma8:migration:preflight` 仍只允许 `adui_scada_test`，返回结构和目录指纹算法不变；需对其真实入口复验，不重复完整 ready。
+
+新增 `pnpm run db:prisma8:migration:compare` 仅在维护者确认已存在独立全新重放八项历史迁移的参考库后执行。它要求同时显式设置 `SCADA_TEST_DATABASE_URL`（本机 15432/adui_scada_test）和临时 `SCADA_MIGRATION_REFERENCE_DATABASE_URL`（本机 15432/adui_scada_fresh_prisma8_ref）；两者均不读取根 .env，不接受额外连接参数（除唯一 schema=public），不允许替换为业务库，也不将临时参考 URL 写入根 .env。两次连接均以 REPEATABLE READ READ ONLY 快照读取迁移登记与系统目录并回滚关闭，不读取业务行，不创建或重放数据库。
+
+对照前确认两个数据库来自同一 PostgreSQL 实例且本次无并发 DDL。比较双方完整版本、编码、collation/ctype、UTC、DateStyle、search_path、standard_conforming_strings，并逐项核对表、字段（含默认表达式）、约束（含原生 CHECK 和外键完整定义）、非主键索引（含完整定义）及已采集中文注释。参考库的全新重放需独立操作证据；仅凭历史登记与匹配不证明独立建立过程。输出双方目录指纹；MATCHED_REVIEW_REQUIRED 仍禁止签名。若尚无参考库，不执行该真实对照或任何创建/迁移命令，先等待隔离目标和写入范围明确批准。不自动重试或修复不一致，不重置数据库。
+
+### Prisma 8 独立参考库历史重放与幂等性验收
+
+先完成 `pnpm run db:prisma8:emit`、`pnpm run test:prisma8:cli`、`pnpm run test:prisma8:migration:preflight`（15 项）、`pnpm run test:prisma8:migration:replay`（9 项）、Vite+、服务端类型检查、中文文案和文档检查。新增离线测试进入完整 ready，但真实重放命令不进入 ready。
+
+真实重放前，维护者必须明确确认仅写入新建隔离参考库 `adui_scada_fresh_prisma8_ref`。在同一本机 PostgreSQL 实例（127.0.0.1:15432）用具备建库权限的管理连接手工建立空库，所有者为 `adui_scada`，使用空模板（如 template0）及与 adui_scada_test 一致的编码、排序规则、字符分类和 locale provider；严禁将 adui_scada_test 或业务库作为复制模板。若参考库已存在，先核查来源与状态，不执行删除、重置或再次重放。不要让管理工具、应用或其他进程在重放期间连接参考库，也不得对两库并发 DDL。脚本的空对象与会话检查不是跨进程锁，不能替代上述操作边界。
+
+使用以下 PowerShell 包装临时指定两个 URL 和固定确认参数；密码仅屏蔽输入，不写入根 .env 或日志。仅在全新空库及范围明确确认后执行：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        $confirmation = Read-Host "确认仅重放全新空库，请输入 adui_scada_fresh_prisma8_ref"
+        if ($confirmation -cne "adui_scada_fresh_prisma8_ref") {
+            throw "未确认独立参考库重放"
+        }
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:migration:replay --confirm-adui-scada-fresh-prisma8-ref
+        if ($LASTEXITCODE -ne 0) { throw "参考库重放失败，禁止自动修复或重试" }
+        Write-Host "独立参考库重放退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) {
+            Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword, confirmation -ErrorAction SilentlyContinue
+    }
+}
+```
+
+脚本先核验已审查的验收库目录指纹与生成 Contract，再查参考库真实库名、public、只读事务、恢复状态、非系统 Schema、public 关系/函数/类型/操作符/排序规则/转换/操作符类及族/文本检索对象、额外扩展、事件触发器、publication、foreign server 及其他会话。确认空库后，仅以独立 `prisma7-reference.config.ts`（不读取业务 URL 或根 .env）调用 Prisma 7.10.1 的固定 migrate deploy/status；不透传第三方原始错误。首次及二次部署均执行 PR #211 双库只读对照，并核验两次迁移登记相等。仅 MATCHED_REVIEW_REQUIRED，不授予签名许可。若任一步失败，保留参考库现状和日志，由维护者检查；禁止自动重试、重置、清库、修改历史、签名或执行 Prisma 8 迁移。已成功重放的参考库再次对照应使用既有只读 compare 命令，而非重复执行 replay。
+
+### 原生 Prisma 8 Contract 候选独立生成与审查
+
+PR #212 已完成独立参考库首次与二次迁移验收，禁止重复执行 replay。先执行 `pnpm run db:prisma8:emit`（正式过渡契约）、`pnpm run test:prisma8:cli`（4 项）、`pnpm run test:prisma8:migration:preflight`（16 项）、`pnpm run test:prisma8:migration:replay`（9 项）、`pnpm run test:prisma8:native`（9 项）、Vite+、服务端类型检查、中文文案、文档检查。新离线测试进入完整 ready，真实候选生成不进入 ready。真实入口只接受两份明确隔离 URL；两库已重放的迁移、目录指纹和 PostgreSQL 查询上下文须保持一致，期间禁止并发 DDL。候选输出目录已存在时先人工保留旧结果，不自动覆盖或清理。
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        if (Test-Path ".artifacts/prisma8-native") {
+            throw "已有原生候选目录，请先手工保留旧结果"
+        }
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:native:review
+        if ($LASTEXITCODE -ne 0) { throw "原生候选生成或评审失败，请保留现场" }
+        Write-Host "原生候选评审退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) {
+            Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+新入口先核验固定 CLI 8.0.0-rc.35 / ORM Postgres 8.0.0-rc.25、正式契约存储哈希及两库只读匹配的已审查目录指纹；由 pg_get_constraintdef 的普通 CHECK 外包装提取原谓词，以 map 原名写入忽略目录中的候选 PSL，调用固定独立配置的离线 contract emit，子进程移除业务和隔离数据库连接环境变量，核对正式 JSON 和 d.ts 字节不变。候选生成后核对列、主键、CHECK 名称/谓词、唯一性与索引、外键完整名称/源列/目标列/动作；同时独立列出运行时根、模型、字段/映射、导航及生成器差异。原生候选目前不定义发布事件反向单值导航，未改正式关系；若物理 IR 完全匹配但运行时元数据不一致，返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED；若二者一致则 STORAGE_REVIEW_REQUIRED。两个状态均不批准签名，退出码 0 仅代表候选物理 IR 审查及报告完成。任何物理差异或生成错误必须以非零退出停止，保留候选源码/产物及固定诊断，不自动修改或重试。真实 CLI 生成及官方 verifier/DDL/运行时类型应用验证仍是后续门禁；当前不调用 db verify、contract infer、migration plan、db sign 或 db migrate。PN_EXACT_NAME_BODY_COMPARISON 属于包内文档描述的原名称谓词精确比较提示，不得忽略真实差异。
+
+PR #213 已实测真实候选生成与 36 个 CHECK 物理 IR 检查通过，两个运行时关系差异仍阻塞；E-142 仅补齐表名类型与等价排序比较器，已成功生成的 .artifacts/prisma8-native 目录保留，不需要为此次排序修复重复真实生成或重新重放。维护者拉取修复后执行 `node --check scripts/prisma8-native-contract-review.mjs`、`node --check scripts/prisma8-native-contract.cases.mjs`、`pnpm run test:prisma8:native`（9 项）、`vp check --fix`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，要求零警告错误。候选 d.ts 依赖与独立配置 Skills 的提示待专门评审；不为消除提示新增根依赖、关闭检查或删除候选产物。
+
+### 原生候选离线运行时兼容评审（不连接数据库）
+
+保留 PR #213 已生成的根目录 .artifacts/prisma8-native/contract.json 与 contract.d.ts，正式生成物及工作区依赖保持已验收版本。先执行下面增量命令；无需再次 emit、重放、安装依赖或设置数据库 URL。
+
+```powershell
+pnpm run test:prisma8:cli
+pnpm run test:prisma8:native
+pnpm run test:prisma8:native:runtime
+pnpm run db:prisma8:native:skills:list
+pnpm run db:prisma8:native:runtime
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+各步必须退出码 0，CLI 预期五项、原生物理评审九项、新运行时离线回归六项，Vite+ 零警告错误。原生 Skills list 应使用与正式配置相同的根目录管理，不执行同步。真实运行时探针核对已验收哈希标识、领域模型/根/执行信息的限定差异及声明对应标识；通过已安装的服务端 TypeScript 先检查正式生成物，再以内存 Host 映射原生候选 JSON/d.ts 的原文、确认实际装载并按现有服务端配置检查，禁止编译输出或写回。两个阶段分别输出类型检查结果，失败停止并保留文件。成功仍输出 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED：类型检查不是实际关系查询验证或签名许可；禁止数据库写入、签名、迁移、重放或正式 Provider 切换。若候选文件缺失或标识/结构不符，停止并保留现状，另行评审，不自动重建或修改生成物。局部离线测试纳入 ready，依赖保留真实候选的专项不纳入 ready。
+
+### 原生候选发布关系只读查询评审
+
+保留 PR #213 原生候选、正式生成物、两隔离库及当前依赖；不再次 emit、同步、迁移、签名或重放。确保专项期间没有并发 DDL。先执行 `pnpm run test:prisma8:native:query`（七项）、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，均须退出码 0 且零警告错误。随后执行：
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    try {
+        $password = Read-Host '请输入隔离数据库密码' -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw '数据库密码不能为空' }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        pnpm run db:prisma8:native:query
+        if ($LASTEXITCODE -ne 0) { throw '只读查询评审失败，禁止自动重试' }
+        Write-Host "只读查询评审退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) { Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+真实查询要求两份契约哈希标识、声明标识和领域关系差异符合此前验收，且测试库目录指纹及 UTC 会话校验通过。目录预检是独立只读快照；随后 ORM 与原始 SQL 共用单一连接的可重复读只读事务，结束回滚。输出未发布样本与已发布样本各自 MATCHED 或 EMPTY；两者 MATCHED 才表明本次两类实际样本覆盖完成，EMPTY 不等于对应实际关系通过，也不自动创建数据。对存在样本比较正向关系、标量、六字段末次事件闭包及错误租户/工程过滤，不验证原生候选缺失的反向导航；不输出业务行或连接串。无论结果均不允许签名、迁移或切换正式 Provider，评审状态仍为 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED。真实查询专项不纳入 ready。
+
+### Prisma 8 原生候选官方 Schema-only 验证（只读诊断）
+
+固定 Prisma 8 Skill 将 db verify 定义为独立诊断；本项目当前没有 Prisma 8 marker，因此只运行 --schema-only，跳过 marker 检查。未传 --strict，允许数据库中保留不属于 Contract 的 Prisma 7 历史元数据。根目录包装器只允许固定命令 db native-schema-verify，仅接受现有 URL 守卫允许的本机 127.0.0.1/localhost:15432/adui_scada_test。包装器不把 URL 放入进程参数，临时向原生配置注入连接，并添加 PostgreSQL default_transaction_read_only=on、statement_timeout=5000、lock_timeout=2000、search_path=public。不会执行 db sign、db update、db migrate、migration plan 或 DDL。
+
+先执行离线 CLI 回归与静态门禁：
+
+```powershell
+pnpm run test:prisma8:cli
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+再执行真实官方 verifier：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    try {
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        pnpm run db:prisma8:native:schema:verify
+        $verifyExitCode = $LASTEXITCODE
+        Write-Host "Prisma 8 官方 Schema-only 验证退出码：$verifyExitCode"
+        if ($verifyExitCode -ne 0) { throw "官方结构验证发现差异或无法执行；保留诊断，不自动修复" }
+    }
+    finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else {
+            $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+        }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+官方 db verify 预期退出码：0 表示符合候选 Contract；4 表示已执行但发现结构差异；2 表示无法执行。必须保留完整官方诊断，不能自动运行修复、签名或迁移。该命令只检查原生候选对现有测试库的 schema 满足关系，不证明发布非空关系样本、反向导航、迁移 DDL 等价或生产接管。真实验证期间禁止并发 DDL。
+
+### Prisma 8 原生基线评审后续门禁（方案，尚未开放执行入口）
+
+PR #216 官方容忍模式结构验证已实测通过。后续分为独立补充只读目录检查、离线基线候选生成及真实新空库验收三个专项，不加入默认 ready。
+
+| 专项         | 输入                                       | 必须保留的证据                                                              | 许可边界                                     |
+| ------------ | ------------------------------------------ | --------------------------------------------------------------------------- | -------------------------------------------- |
+| 补充目录核验 | 两个既有隔离库及八份历史 SQL               | 十二个主键索引的完整目录、119 个最终注释对象、独立补充指纹、负向回归        | 仅读取；禁止改写历史指纹                     |
+| 离线候选     | 已验收原生 Contract、固定 RC、独立空迁移图 | 官方 migration.json、ops.json、migration.ts、snapshot、预览、哈希及操作审查 | 仅在明确批准后写入独立忽略目录，不连接数据库 |
+| 真实基线验收 | 另行批准的新建空隔离库                     | 空库检查、全部约束及中文注释目录对照、负向测试、标记及二次部署证据          | 单独批准；不使用两个既有隔离库作为部署目标   |
+
+离线规划使用明确的空起点，不能把 greenfield CREATE 应用于已有历史的库。详细方案与失败条件见 [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)。现阶段只需要对本次文档更新运行 docs:check 及 Vite+ 静态检查；保留已有候选及真实 verifier 证据，无需重新生成 Contract、重放历史迁移或重复执行官方验证。不得直接执行未开放的规划、签名或部署命令。
+
+### Prisma 8 主键索引及最终中文注释补充只读核验
+
+保留两座原隔离库及已验收原生候选；确保没有并发 DDL。先执行 `pnpm run test:prisma8:migration:preflight`（十九项）、`pnpm run test:prisma8:native:catalog`（七项）、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，各命令须退出码 0，Vite+ 须零警告错误。
+
+随后仅对本机现有两个隔离库运行：
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        $password = Read-Host '请输入两个隔离库共用的数据库密码' -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw '数据库密码不能为空' }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:native:catalog
+        $auditExitCode = $LASTEXITCODE
+        Write-Host "目录补充核验退出码：$auditExitCode"
+        if ($auditExitCode -ne 0) { throw '补充核验失败，保留诊断，不自动修复或重试' }
+    } finally {
+        if ($null -eq $previousTestUrl) { Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) { Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+预期原目录指纹仍为 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`；补充范围 PRISMA8_PRIMARY_INDEX_AND_COMMENTS_V1，独立补充指纹为实际输出的 64 位十六进制 SHA-256（尚未实测）；主键索引 12、最终中文注释 119，对照状态 MATCHED_REVIEW_REQUIRED，签名许可否，退出码 0。两个快照均强制只读、可重复读，检查完成后回滚并关闭。不是跨库原子快照；不允许并发 DDL。未声明注释的其他十个主键索引仅比对实际注释和定义，不写入。失败时不重放历史、不重新生成原生候选、不自动修复数据库。基线生成、写入夹具、部署和签名仍需分别批准。
+
+### Prisma 8 原生基线独立离线规划候选
+
+PR #218 已获得两库主键索引 12 项、最终中文注释 119 项的真实补充证据，补充指纹为 `b7ce46a8e3a203dce7a63fc94bbf1a11d0244521b6efc697e64b1b1a34fd02ad`。保留现有两座隔离库、历史迁移、正式生成物和 .artifacts/prisma8-native 原生候选。无须重新 emit、重放、安装依赖或设置任何数据库 URL。先执行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline &&
+pnpm run test:prisma8:native &&
+pnpm run test:prisma8:native:runtime &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "离线门禁验收退出码：$LASTEXITCODE"
+```
+
+原生成验收目标九项新增门禁、九项原生评审、六项运行时评审均通过（E-144 修复后采用下节十二项门禁），Vite+ 零警告错误。只有维护者明确批准实际生成离线候选、确认没有并发文件修改且 .artifacts/prisma8-native-baseline 不存在时，才执行以下单独命令；确认参数只授权离线生成，不授权数据库访问、签名、部署或任何 DDL 执行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline
+Write-Host "离线基线候选生成退出码：$LASTEXITCODE"
+git status --short
+```
+
+包装器不使用通用 CLI 参数，不读取连接配置或加载 dotenv，只以固定空起点规划、独立配置和系统环境白名单启动本地已安装 CLI。不属于操作系统网络沙箱；禁止改变配置或并发修改输入/输出。生成目录 .artifacts/prisma8-native-baseline 保留三份原文副本、官方 plan.json、plan.stderr.txt、迁移包 migration.ts/migration.json/ops.json 与目标 snapshot。成功须出现目标存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`、实际原文 SHA-256、实际迁移标识、实际计划操作数量和 BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可否，部署许可否。若 JSON、目录、操作类别（当前只接受 additive）、占位符、目标快照或任何输入变化导致失败，保留全部文件和诊断，禁止自动删除、重试、改 JSON、改哈希、补写注释或执行迁移。真实固定 RC 结果可能与模拟的形状不同，须依据实际诊断进一步评审，不通过放宽门禁绕过。下一步单独审查操作和 DDL 以及全部 119 项中文注释，不视生成成功为等价证明。
+
+### 原生离线基线 E-144 已有候选复验（替代重复生成）
+
+实际独立目录已生成，禁止再运行 plan、删除或覆盖原目录。保留正式与原生候选、官方 plan.json、ops.json、迁移源码和快照；不要设置数据库 URL，也不要执行迁移源码。拉取 PR #219 修复 HEAD 后运行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:prisma8:native:baseline &&
+pnpm run test:prisma8:native &&
+pnpm run test:prisma8:native:runtime &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run db:prisma8:native:baseline:review
+Write-Host "只读复验链退出码：$LASTEXITCODE"
+git status --short
+```
+
+目标分别为 12/12、9/9、6/6，Vite+ 零警告错误；复验输出目标存储哈希 6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc、原文指纹 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd、46 项操作、BASELINE_ARTIFACT_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。上述为实际归档已确认的预期值，不是 Windows 修复 HEAD 的实测输出。若失败保留原件和诊断，不重试规划，不更改 JSON 或哈希。实际 SQL 缺少 119 项中文注释，禁止部署；后续完整物理及注释评审、第三库重放和非空样本分别审批。
+
+### 原生基线固定原件 DDL/注释文本专项
+
+PR #219 原包复验已通过，继续保留 .artifacts/prisma8-native、.artifacts/prisma8-native-baseline、正式生成物及两个既有隔离库。不得重新规划、覆盖、移动候选包或设置数据库连接；本批固定维护者原包十份文件的字节指纹，任何变化或另一次生成须独立评审。不执行迁移源码。
+
+```powershell
+git rev-parse HEAD
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run db:prisma8:native:baseline:ddl
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+目标 8/8 与 12/12、Vite+ 零警告错误、增量退出码 0；原候选复验后须显示固定原件十项匹配、实际 DDL 46 项、历史最终中文注释 119 项而原包 0 项、独立注释审查文本指纹 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7、DDL_TEXT_MATCHED_COMMENTS_BLOCKED、签名与部署许可均否。该指纹来自实际历史文件的独立文本提取，完整 Windows 集成入口尚待实测。若希望查看完整注释审查文本，可另行执行 pnpm run db:prisma8:native:baseline:comments；仅标准输出预览，禁止将其管道送入数据库或改写官方生成物。失败保留证据，不自动重试规划或放宽门禁。此检查不等于 PostgreSQL 约束负向、官方迁移哈希重算、依赖解析或自发射验收。
+
+### Prisma 8 原生基线独立中文注释自发射候选
+
+保留根目录 .artifacts/prisma8-native-baseline、原生候选、正式生成物与两个现有隔离库，不重跑原始 plan。先执行增量验收：
+
+```powershell
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "离线注释门禁退出码：$LASTEXITCODE"
+git status --short
+```
+
+只有维护者明确确认离线自发射、增量门禁通过、没有并发文件修改且 apps/server/.artifacts/prisma8-native-baseline-comments 不存在时，运行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:comments:emit --confirm-offline-comments
+Write-Host "独立注释候选自发射退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期固定原件匹配、165 项操作、新官方迁移标识、COMMENTS_EMITTED_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。命令先干跑并验证完整操作，再自发射独立副本、比较实际产物与干跑，最后离线执行官方 migration check。保留 emit-dry-run、emit、migration-check 各自 stdout/stderr 文本及生成包；若失败保留新目录和诊断，不删除、不覆盖、不重复运行，不手工改 ops.json 或 migration.json。此路径首次真实 RC 行为尚未验证，不保证一定通过；不设置数据库 URL，不执行 SQL 或数据库迁移。
+
+### E-146 脚手架门禁修复后的增量复验
+
+首次 Windows 增量 28 项通过，但真实自发射入口在构造源码阶段退出 1，未启动官方进程。拉取 PR #221 最新提交，复验同一增量链；注释专项由 8 项增至 10 项，总计 30 项。原包及其他候选不重新生成。先确认独立注释输出目录不存在，再使用原确认参数执行；若再次失败，保留新阶段中文诊断。若报脚手架相关错误，仅提供原包的 migration.ts 原文和 SHA-256 用于定位，不编辑原件。若已产生独立输出目录，不删除或自动重试；保存对应 stdout/stderr。
+
+### 独立中文注释候选部署前离线复验
+
+PR #221 已完成真实 self-emit 和官方 migration check；保留根目录原包及 apps/server/.artifacts/prisma8-native-baseline-comments 的已有产物，不再次生成或清理。先进行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "独立候选增量验收退出码：$LASTEXITCODE"
+```
+
+预期新增七项及原三组 30 项全部通过。之后只读复验已有候选：
+
+```powershell
+pnpm run db:prisma8:native:baseline:comments:review
+Write-Host "独立候选离线复验退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期固定候选 14 个文件、165 项操作、已验收迁移标识 e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17，重新官方干跑与完整性检查通过，CANDIDATE_PREFLIGHT_REVIEW_REQUIRED，签名/部署许可否。提交完整输出的证据清单和指纹供后续固定字节门禁；此次实际新候选文件指纹尚未取得，首轮采集不能冒充与历史指纹匹配。禁止并发改动、重生成、手改迁移元数据、设置数据库 URL、执行数据库写入或签名。如失败保留原目录及原始六份日志，不自动修复或重试；目录额外对象需先核实，不得删除证据。第三座空库的名称、连接与操作授权另行确认。
+
+### 固定十四文件证据与第三座专用空库只读预检
+
+PR #222 真实复验成功，证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e；本批固化完整清单，已有离线复验不接受任何字节漂移。保留原包及独立候选，不重生成。先执行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline:preflight &&
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "空库门禁增量验收退出码：$LASTEXITCODE"
+```
+
+预期 45 项测试通过。单独离线复验仍可执行 pnpm run db:prisma8:native:baseline:comments:review。真实空库预检仅在维护者确认本机隔离数据库 adui_scada_fresh_prisma8_native 已存在、由明确角色所有、未部署且无其他会话时运行；未创建的库另行确认，不由脚本创建、删除或清空。使用当前本机 Docker PostgreSQL 的专用连接及实际数据库所有者，示例采用既有本机角色 adui_scada，不将密码写入 .env、不覆盖任何其他数据库 URL。运行前关闭该专用库的 Navicat 查询窗口和其他会话。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用空库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:preflight --confirm-adui-scada-fresh-prisma8-native
+        $preflightExitCode = $LASTEXITCODE
+        Write-Host "第三座空库只读预检退出码：$preflightExitCode"
+        if ($preflightExitCode -ne 0) { throw "只读预检失败，保留现场，不自动重试" }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+如果专用库由其他本机角色所有，只能将示例中的用户名改为该实际所有者；不得改主机、端口、库名或使用旧库。检查先完成固定候选官方干跑/完整性复验，再建立仅第三座库的只读连接，使用 REPEATABLE READ READ ONLY 查询实际库名、角色、所有者、必要权限、UTF8、UTC、标准字符串及 23 类受检空目录与会话；回滚关闭后复核候选证据及原件。预期 NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED、23 项通过、签名/部署许可否、退出码 0。预检不是跨事务锁，不保证检查后仍为空；禁止并发 DDL 或其他连接，未来写入前必须重新预检并另行授权。失败只保留现有文件及中文诊断，不执行 CREATE DATABASE、ALTER、DROP、迁移、签名或清理。
+
+### E-147/E-148 第三座空库预检复验
+
+首次 Windows 五组 45 项回归通过，固定十四文件及官方复验退出 0，但控制字符正则存在两条警告，真实空库预检退出 1。修复后预检专项十项，总计 47 项；沿用上一节增量链，要求 Vite+ 零警告、零错误。原候选无需重新生成。若尚未确认第三座库存在，可先在 Navicat 本机 127.0.0.1:15432 的已知可用连接上只读查询：
+
+```sql
+SELECT datname, pg_catalog.pg_get_userbyid(datdba) AS owner, datallowconn
+FROM pg_catalog.pg_database
+WHERE datname = 'adui_scada_fresh_prisma8_native';
+```
+
+无记录表示该连接所在 PostgreSQL 实例没有专用库，不执行创建、改所有者、清理或迁移；需单独确认。若存在且为明确的独立空库、所有者符合预期、无其他会话，按上一节 PowerShell 临时专用 URL 与确认参数只读预检一次。新诊断只输出固定阶段及已知错误码，例如连接失败 3D000 / 28P01、目录查询失败 42501 / 42703；保留该中文诊断，不输出密码、连接串、原始数据库错误或堆栈，不自动重试。实际失败原因仍待实测；任何失败保持签名和部署许可否。
+
+### 第三座专用库真实迁移失败后的只读恢复（E-150）
+
+首次 Windows 六组 52 项通过，官方在线路径唯一固定基线边，写入前只读门禁通过；真实迁移退出 1，官方异常未被原包装器保留，当前数据库状态未知。此节替代原来的真实写入操作指引。先执行新增 `pnpm run test:prisma8:native:baseline:recovery`、原六组专项及 `vp check`、`messages:check`、`docs:check`；预期七组 58 项通过、零警告错误。关闭第三座专用库其他连接，保留原包、独立候选及全部数据库；不运行原写入确认，不重新生成。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state
+        $recoveryExitCode = $LASTEXITCODE
+        Write-Host "第三座库只读恢复检查退出码：$recoveryExitCode"
+        if ($recoveryExitCode -ne 0) { throw "只读恢复检查失败，保留现场" }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+该入口只读取专用库系统目录、固定元数据统计，不执行官方迁移或签名；所有只读事务在返回前回滚并关闭。仅发现无业务表和标记 schema 等时，再单独执行原 23 类严格空库检查。预期恢复状态 NATIVE_MIGRATION_RECOVERY_REVIEW_REQUIRED、再次迁移许可否；如果退出非零同样保留现场。marker/ledger 字段依据上游源码核对，固定 RC.35 真实列形状仍需实测，若不符则停止并报告固定阶段及已知错误码。原失败错误已丢弃，不能由新的只读查询追溯，必要时只在本机检查 PostgreSQL 日志并仅分享脱敏的错误类别。目录统计或元数据匹配不等于已验证全结构、注释、约束或历史接管。禁止再次迁移、签名、重置、清理及并发数据库操作。
+
+### 第三座库恢复验收后的单次人工诊断执行
+
+> 历史记录：PR #225 已完成该单次尝试且失败，下列命令不再允许执行；以本文件末尾的新只读对照指引为准。
+
+PR #224 已合并，维护者真实恢复确认受检空库与固定证据未变；Docker 现有错误日志未取得首次官方迁移的直接原因。旧写入确认继续拒绝。本节新增的确认参数只在维护者明确同意本次诊断性迁移时运行，不属于自动测试或 ready。先完成恢复专项（原六项加新六项，预期十二项）、迁移与空库专项、Vite+、中文及文档检查。保持原件、独立候选、第三座库和其他库不变，关闭第三座库其他连接。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:migrate --confirm-adui-scada-fresh-prisma8-native-retry-once
+        $migrationExitCode = $LASTEXITCODE
+        Write-Host "第三座库一次性恢复尝试退出码：$migrationExitCode"
+        if ($migrationExitCode -ne 0) {
+            pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state
+            $recoveryExitCode = $LASTEXITCODE
+            Write-Host "第三座库只读恢复检查退出码：$recoveryExitCode"
+        }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+在原有两次空库预检及唯一官方路径预览通过后、官方迁移调用前，独占创建 apps/server/.artifacts/prisma8-native-baseline-retry-20261126.json；仅保存固定范围和候选指纹，不含凭据且不改动十四文件候选。该本地记录防止同工作区重复调用，不是数据库锁、跨主机锁或对抗恶意文件修改的边界。记录存在即拒绝，再次运行、删除或移动记录、重置数据库、修改迁移包以绕过门禁均禁止。若失败，仅执行只读恢复，分享已脱敏的退出码和诊断码；即使再次为空也不得重新执行。若成功，官方验证和剩余路径复验须通过，再进入实际目录、注释、约束和历史语义对照，不代表正式接管许可。
+
+### 单次恢复尝试已消耗：仅允许结构只读对照
+
+PR #225 的真实执行返回 MIGRATION.SCHEMA_VERIFY_FAILED（官方退出 2），随后只读恢复 0、23 类严格空库检查通过，十四文件指纹不变。上一节一次性命令是历史验收记录，**不得再次执行**；新候选无条件冻结原写入确认与单次恢复确认，不能删除尝试记录或更换工作区绕过。第三座库保持现场，不重新连接执行迁移。
+
+先运行 CLI 九项、恢复十二项、迁移五项和空库十项及 Vite+、中文和文档检查。然后只在维护者已验收的 adui_scada_test 控制库进行对照，禁止并发 Schema 变更。先确认锁定的 Prisma CLI 8.0.0-rc.35、Provider 8.0.0-rc.25，以及既有原生候选 .artifacts/prisma8-native/contract.json SHA-256 为 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、contract.prisma 为 b8ed4ffa398d84ce4a1fd34863de95ca3a3ea83508358d428233b8a2e3d3ad83；若不一致停止，不重新生成。以屏蔽输入密码构造临时 SCADA_TEST_DATABASE_URL（本机 127.0.0.1:15432/adui_scada_test?schema=public），用 try/finally 恢复原变量。运行既有宽容 `pnpm run db:prisma8:native:schema:verify`；若退出 0 再运行 `node scripts/prisma8-cli.mjs db native-schema-verify-strict`，固定官方参数为 db verify --schema-only --strict --json。两种模式都不迁移、不签名，不连接第三座库。严格输出和 stderr 只在本机内存捕获，记录退出码及脱敏后的结构路径、诊断码、差异类别，禁止直接分享完整 JSON、原始错误或连接串；如不能解析机器封装，报告该情况而非猜测差异。严格退出 4 是结构发现，退出 2 是验证执行失败；都不是迁移结果。若仅有历史登记额外对象，不能归因第三座库；保持全部原件和尝试记录，不删除登记、不放宽严格验证。
+
+### 固定候选执行检查条件离线取证
+
+维护者 Windows 实测 CLI 9/9、恢复 12/12、迁移 5/5、空库 10/10，共 36/36；Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96、增量退出 0、工作区干净。固定 RC 与两份 Contract SHA-256 通过；历史验收库真实宽容及严格 schema-only 均退出 0，严格官方机器结果 True。日志未单独输出本机 HEAD，远端 PR #226 HEAD ac0b7abad8094b0ce38036f1fe5a2a234709cbd7，经明确授权 Squash 合入 5797d5388eac7b531ae13e51e0b336ef770bf460。仅确认控制库结构符合契约，不证明第三座库迁移后的实际目录或失败原因。
+
+新增固定离线执行检查评审入口，仅校验已安装 CLI/Provider 版本及入口路径，不启动 CLI，不创建连接或子进程。复用固定原包十文件、独立候选十四文件、离线配置指纹门禁，读取候选 ops.json 后按已验收清单再次核对长度及 SHA-256；检查 46 项结构与 119 项注释顺序边界、唯一标识、additive/postgres/单 execute、precheck/postcheck 形状；导出结构操作的检查 SQL 和参数及缺失/相同检查标识，注释仅统计覆盖，不导出注释 SQL/参数、执行 SQL、任意元数据或连接凭据。输出前再核对原包和候选。不执行 SQL，不写任何候选或数据库，不授权签名、部署或再次迁移。报告是静态证据，不代表真实执行或 PostgreSQL 结构验证。
+
+```powershell
+pnpm run test:prisma8:native:baseline:execution
+vp check
+pnpm run messages:check
+pnpm run docs:check
+node apps/server/prisma8-native-baseline-execution-review.mjs
+```
+
+真实入口不需要密码或环境变量，不接受额外参数。成功 stdout 为 JSON，可在本机审查后另存候选目录之外的文件；若失败仅记录固定阶段和退出码，不重新生成或修改文件。分享前人工检查结构 SQL 和参数；不得分享环境变量、连接串、完整原始错误或业务数据。报告状态 EXECUTION_CHECK_REVIEW_REQUIRED，结构 46、注释 119、签名与部署均 false；空检查和相同检查只供分析，不表示故障或成功。
+
+### 固定迁移目标快照直接只读结构对照
+
+新增固定直接只读入口，锁定 CLI rc.35/Provider rc.25 及原包、十四文件，核对唯一迁移目标快照与候选根契约的文件哈希和 JSON 深度相等。仅复用 adui_scada_test URL 守卫并进一步限定 127.0.0.1:15432、非空凭据及固定只读启动参数，不接受额外命令行参数；以公开 createPostgresControlClient、connect、schemaVerify、close 顺序执行宽容及严格两种直接验证。结果仅返回严格标志、真假、问题与警告计数及契约声明范围内脱敏路径；目标存储哈希、strict 及结果形状不一致即失败。连接、验证或关闭异常不回显原文；关闭后再核对证据。该公开 API 不暴露连接内独立 SQL 查询，因此只读启动设置由 URL 和 sessionSettings 固定，不声称已在同一事务查询 read_only 或复现失败瞬间；禁止并发 Schema 变更。未连接第三座库，不调用迁移、签名、自定义 SQL 或写入，不修改原包、候选、历史、依赖或正式 Provider。
+
+```powershell
+pnpm run test:prisma8:native:baseline:direct-schema
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+真实入口只接受临时 SCADA_TEST_DATABASE_URL，密码使用屏蔽输入并进行百分号编码，保持本机 127.0.0.1:15432/adui_scada_test?schema=public；使用 try/finally 恢复原变量。执行 `node apps/server/prisma8-native-direct-schema-review.mjs`，不附加参数。退出 0 为两种直接校验均通过，4 为取得合法报告但至少一种结构不匹配，1 为版本、证据、连接、结果形状或关闭失败；均不代表迁移结果。禁止连接第三座库或重新执行迁移；只分享已经脱敏的 JSON、退出码及已存在离线报告的 missingPrecheck/missingPostcheck/identicalChecks 三个标识数组。
+
+PR #228 的 E-152 修复新增三项模拟回归，专项预期 7/7；验证或关闭失败后仍复核证据，证据复核失败与原错误一起脱敏输出，退出 1。只有证据复核通过时才返回报告；真实历史库直接宽容与严格已在修复前通过，修复后仍需 Windows 质量检查及一次只读复验。不得再次执行迁移。
+
+### 原生迁移结构失败离线诊断与授权边界
+
+新增只读离线诊断解析器：只接受已有机器诊断的标准输入，16 MiB 上限，匹配唯一 db.migrate 结构失败封装，兼容直接错误、逐行事件最终错误及最终诊断数组；命令、严重度和结果状态矛盾、重复或畸形结果拒绝。仅输出契约白名单结构路径、由 expected/actual 存在性派生的类别、两种已知解释类别和数量，未知路径脱敏，不输出节点原值、摘要、解释正文、凭据、连接串或任意元数据；缺失列表与空列表分别用 null 与 0 表达，均不代表零差异通过。入口复用原包/固定十四文件门禁，另核对候选 contract.json 长度及 SHA-256，复用已有路径白名单，输出前复核固定证据。离线入口不认证日志来源，不调用 Prisma CLI、数据库驱动、迁移、签名或任何写入；不能通过旧错误码重构丢失的具体结构差异。退出 0 仅表示取得非空合法脱敏差异，4 表示唯一失败但缺少具体差异，1 表示输入或证据拒绝。所有报告 signingAllowed 和 deploymentAllowed 均为 false；旧迁移入口及写入冻结门禁不变。
+
+```powershell
+pnpm run test:prisma8:native:baseline:schema-failure
+pnpm run test:prisma8:native:baseline:direct-schema
+pnpm run test:prisma8:native:baseline:candidate
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+仅当维护者已经拥有实际失败时的原始机器输出文件，才可在本机用 `Get-Content -LiteralPath $existingDiagnosticFile -Raw | node apps/server/prisma8-native-schema-failure-review.mjs` 解析；变量须指向已存在的真实文件，不得使用模拟内容冒充真实证据。仅分享脱敏 JSON 或固定失败阶段。没有原始输出时记为不可恢复，不重新执行迁移。
+
+下一阶段隔离复现方案（仅提议，尚未获得单独数据库操作授权）：保留第三座库、一次性尝试记录、历史验收库、参考库和固定原件。使用完全独立的本机临时 PostgreSQL 实例，选择未占用的专用回环端口、独立数据卷、专用库及一次性凭据，不继承现有容器卷、数据库连接串、根 .env 或其他服务网络。优先核对与既有 PostgreSQL 17.11 相同的实际镜像摘要及环境，不擅自升级。使用候选的独立只读来源副本，核对 CLI rc.35/Provider rc.25、十四文件证据和唯一空起点迁移边；任何执行入口须另行评审连接白名单、实际库/角色/版本、严格空库门禁及一次性授权。仅在明确批准的独立实例执行一次官方原生迁移，捕获官方机器输出，失败时在丢弃原文前提取脱敏 schemaIssues；成功也仅作隔离复现结果，保留现场并停止。若无法取得具体结构差异，再单独评审同一事务内逐项 DDL、目录读取与回滚的实验，而不是继续重复历史库验证。禁止自动创建、重置或清理数据库，禁止重试第三座库、改动正式 Provider、签名、发布或推进引用。本批未实现或执行任何新的在线复现入口。
+
+### 固定 CHECK 修复迁移包重复离线复验
+
+保留原验收工作区及独立 plan/complete 文件和全部历史原件；不得重新生成、搬移、覆盖或清理。新入口不需要数据库口令，固定配置没有数据库连接。先执行增量质量检查，失败即停止：
+
+```powershell
+pnpm run test:prisma8:native:baseline:check-repair-package-review &&
+pnpm run test:prisma8:native:baseline:check-repair-package &&
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run config:check &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+```
+
+格式化修改须正常提交后，在干净工作区连续两次复验：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-repair-package:review &&
+pnpm run db:prisma8:native:baseline:check-repair-package:review &&
+vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "固定修复包复验退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+报告必须为 NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED，165 项操作、24 文件、两份配置、固定证据指纹、offlineReviewPassed/evidencePreserved 为 true，regenerated/roundTripVerified/signingAllowed/deploymentAllowed 为 false。失败保留现场，仅分享固定阶段或脱敏报告。四座数据库均冻结，不执行在线命令。
+
+### 固定修复包最小 CHECK 往返离线计划
+
+原工作区内保留全部证据，执行 `pnpm run test:prisma8:native:baseline:check-roundtrip` 与 `pnpm run test:prisma8:native:baseline:check-repair-package-review`、`pnpm run config:check`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。提交格式化后确认工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。该入口复用已存在固定修复包离线复验，只输出计划 JSON，不写文件、不连接数据库；预期两项约束各三阶段，每阶段八个合成输入，计划指纹及原证据指纹，databaseExecutionAllowed/roundTripVerified/signingAllowed/deploymentAllowed=false。没有真实采集入口，不执行任何数据库命令，失败停止并保留证据。
+
+本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
+
+### 2026-11-26 · 固定 CHECK 往返事务模拟与隔离边界
+
+新增 `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`（12 项纯模拟，纳入 ready）。原工作区同时复验 `pnpm run test:prisma8:native:baseline:check-roundtrip`、`pnpm run test:prisma8:native:baseline:check-repair-package-review`、共享配置、Vite+、中文文案、Markdown；格式化正常提交后工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。计划必须仍为已验收指纹，全部许可 false，退出 0。不要连接任何数据库，不提供新实例创建或执行命令；若不符停止保留现场。实际隔离实例准备和真实运行须分别明确授权。
+
+本批将真实验收指纹固定到既有离线计划入口和事务协议模拟器，复算完整 payload 并要求所有许可仍为 false；计划篡改后重算亦拒绝。拟议第五座仅为模拟配置：PostgreSQL 17.11（170011），沿用第四座的镜像 ID，独立容器 `adui-scada-prisma8-check-roundtrip`、同名前缀独立卷 `-data` 与网络 `-net`、仅回环 `127.0.0.1:15434`、数据库 `adui_scada_fresh_prisma8_roundtrip`、角色 `adui_scada_native_roundtrip`。端口可用性与实际镜像、卷、网络、排序规则及集群身份尚未核验。模拟边界要求本机 Linux Docker、独立资源、容器与 TCP 集群标识相等且不同于四座冻结库的标识（允许旧库共享集群）、参照与目标排序规则元数据完全相同、23 类空库及无其他会话、数据库所有权与默认只读。模拟事实不认证来源，真实采集和同一连接的事务内复核、独占一次性许可及真实证据留存仍未实现。
+
+### 第五座实例创建前宿主机只读预检
+
+在 Windows 原验收工作区，先执行增量质量链：
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-host.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check &&
+vp check --fix && vp check &&
+pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+```
+
+如有格式化改动，正常提交并推送。最终干净工作区执行以下只读入口；不要求数据库口令：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:host-preflight
+Write-Host "宿主机预检退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批只增加第五座创建前宿主机只读预检。拒绝非 Windows、附加参数和 Docker 环境覆盖；先从本机上下文取得端点，仅允许两种固定 Windows 命名管道，后续 Docker 查询显式固定 --host，并要求 Linux 引擎、第四座保留容器镜像 ID 与本机固定镜像完全相同、第五座容器/卷/网络均不存在（含停止容器），再用无 Profile 的固定 Windows PowerShell Get-NetTCPConnection 检查所有本地 TCP 记录中的 15434。任何子进程异常、非零、信号、标准错误、资源重名或端口异常均短路并仅返回固定中文诊断；子进程不继承数据库连接串或凭据。不执行 Docker exec、run、pull、create、删除或 PostgreSQL 操作。报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，仅表示当前宿主机观察通过，不认证真实数据库来源；portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均为 false。端口检查不是端口预留，不能证明排除端口范围、未来竞争或 Docker 发布成功。第五座仍未创建，后续身份、排序规则、23 类空库与实际执行许可需分别核实；四座数据库及正式 Prisma 7 保持冻结边界。
+
+若任何一步失败，保留资源，不切换远程端点、不清除现有容器/卷/网络、不更改端口、不重新拉取镜像。只分享脱敏报告或固定阶段。成功后仍须维护者单独批准第五座实例创建。
+
+### 第五座创建前冻结库系统目录只读采集
+
+先在 Windows 原验收工作区运行增量链（全部为离线专项和静态门禁）：
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference-entry.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+仅维护者另行明确同意冻结库系统目录只读访问后，才可以在最终干净工作区执行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly
+Write-Host "冻结库目录只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批仅开发第五座创建前的冻结库系统目录只读采集入口，不提供创建或写入命令。单独确认参数 `--confirm-frozen-catalog-readonly` 之外的任何参数均拒绝；先复用既有宿主机预检，在同一个已核验 Windows 本机 Docker 端点内，以固定 Compose 项目/服务标签定位唯一历史 PostgreSQL 容器并核对运行状态和完整容器 ID；核对第四座容器运行状态、独立实验标签、固定镜像与不同容器 ID。仅两次固定 `docker exec`：通过容器内 `postgres` 系统用户、清空进程继承环境、固定 Unix socket、非交互 psql、不加载 psqlrc、不提示口令，分别访问 adui_scada_test 和第四座专用库。每次使用 `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`、固定超时及 default_transaction_read_only、只读 SELECT `pg_catalog.pg_database`/`pg_control_system()` 并 ROLLBACK；前三库通过同一共享系统目录精确核对三条目标元数据，不分别连接其业务数据库。真实连接身份、角色、170011 版本、当前和默认只读、重复读、目标数据库集合、两个集群标识不重复均须通过。仅比较四个冻结库的 UTF8、locale provider、LC_COLLATE、LC_CTYPE、locale、记录版本及实际排序规则版本；缺失、未知、自定义 ICU 规则或版本漂移一律停止另行评审。不读取业务表、配置凭据、根 .env 或完整容器环境，不修改数据库、容器、卷、网络、访问权限或既有证据，不自动降级认证或重试。此阶段保守地要求四个库的排序规则完全相同；实际存在不同合法设置也必须人工评审，不能为通过而刷新排序规则版本。报告只输出经白名单校验的参考排序规则及计数，不输出容器/集群原始标识。报告状态 NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED，observedDatabaseCount=4、observedClusterCount=2、referenceCatalogObserved/allFrozenCollationsMatch/recordedCollationVersionMatches=true，沿用宿主机八个 false 许可字段；不认证后续目标 TCP 集群或保证下一次状态不变。第五座创建、独立凭据、目标同一连接内核验及真实 48 项实验仍须单独授权和实现。
+
+真实入口不要求数据库口令；如本地认证拒绝、容器停止、版本或排序规则不同，停止并只分享固定失败阶段，不修改任何现有库、权限、排序规则、容器或凭据。成功后仍需另行批准第五座创建。
+
+### 2026-11-27 · 排序规则版本报告及只读观察复验
+
+本节更新上节目录报告的验收语义；原报告历史记录保持不变。
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-reference.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check &&
+pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+预计四组专项 40 项（12+8+12+8），无警告或失败。格式化改动正常提交并推送，最终干净工作区再复验已授权的系统目录只读范围：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly
+Write-Host "冻结库目录只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批修正 PR #237 的目录报告语义，保留已记录的历史原始结果，不改 SQL 查询、只读事务、角色、库名、端口、固定证据及正式 Prisma 7。新增 actualVersion 字段；仅两版本均存在且相等才报告 recordedCollationVersionAvailable=true、recordedCollationVersionMatches=true、recordedCollationVersionStatus=MATCHED；libc 两版本均为 null 时报告 false/null/UNAVAILABLE，缺失字段、单侧 null、版本不一致、非 libc 双 null、自定义规则均拒绝。保留 allFrozenCollationsMatch 兼容字段，其含义仅为目录元数据一致，并以 allFrozenCollationCatalogMetadataMatch 明确说明。两座容器必须与已固定镜像 ID 相同；仅通过 Docker inspect 的固定模板读取挂载目标 JSON（不读取源路径或环境），并以两次 docker diff 检查指定 libc/locale 路径及其祖先和子树的可见变更。路径不规范、挂载覆盖、可见文件变更、异常输出均先于数据库连接拒绝，保留固定中文诊断。本次保守规则也可能因 Docker 报告的祖先目录变更而拒绝正常容器，须评审实际观察，不删除、重建、清理或修改冻结容器以通过。成功仅报告 containerImageIdentityMatched=true、localeRuntimePathsObservedUnchanged=true，collationRuntimeIdentityVerified 始终为 false；Docker inspect/diff 不是实际进程加载库的内容哈希或 locale 行为认证，亦不排除未列路径、环境覆盖、并发变化。第五座尚未创建，后续创建与真实执行仍须分别授权；所有许可及来源认证继续为 false。
+
+若环境仍与原真实目录一致且新增路径检查通过，预计版本状态 UNAVAILABLE、匹配值 null；不是要求将实际版本强制改为 null。失败时仅分享脱敏阶段并保持现场。
+
+### 2026-11-27 · 第五座实验端口调整复验
+
+维护者明确要求将尚未创建的第五座 CHECK 往返实验宿主机端口由 15434 改为 15444。当前唯一固定目标为 `127.0.0.1:15444`，容器内 PostgreSQL 端口仍为 5432；其他目标身份、镜像、库名、角色、卷、网络和四个冻结库均保持原状。此决定取代前文的第五座 15434 拟议配置，不修改前文历史验收证据。`roundTripTarget.port` 是运行时单一配置源；宿主机预检继续要求所有目标端口 TCP 记录为空数组，旧 15434 及其他目标端口的模拟身份拒绝。不接受环境或参数覆盖，不自动选择端口，不清理进程，不改变创建或执行许可。固定离线往返计划不包含宿主机端口，计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变。15444 实际可用性、排除端口范围及未来发布绑定尚未核实。
+
+沿用上一节四组专项及静态增量链（预计 40 项），格式化后保持干净工作区。维护者已授权的系统目录只读入口及确认参数不变，执行上一节真实离线计划与目录采集命令；成功报告 target.port 必须为 15444，原计划指纹不变，全部创建与执行许可仍为 false。若新端口亦被拒绝，保留现场，不自动更换、不放宽门禁。
+
+### 2026-11-27 · 第五座待审批创建契约验收
+
+先执行离线增量质量链（预计 48 项）。
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-creation.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-creation-entry.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-creation.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-creation &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+正常提交、推送格式化变更后，在干净工作区执行已授权的系统目录只读观察及待审批计划生成：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly
+Write-Host "创建计划只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 NATIVE_CHECK_ROUNDTRIP_CREATION_REVIEW_REQUIRED，创建计划指纹为 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，target.port=15444，所有许可及 creationAttemptClaimed 均为 false。报告中的创建确认字符串仅为未来契约，当前 CLI 不接受它作为执行参数。不需要数据库口令，不执行 Docker 创建命令。
+
+本批仅增加第五座待审批创建契约及请求匹配器。只读入口复用同一固定本机 Docker 端点的四库目录采集，要求整份参考报告与 PR #238 真实观察完全一致；拒绝缺失、额外、伪造许可、旧端口、资源或镜像变化、排序规则漂移。计划固定 127.0.0.1:15444 -> 5432、原镜像 ID、新独立容器/本地命名卷/专用 bridge 网络、禁止复用现存资源、禁止拉取镜像、禁止自动重启，部分创建失败应保留现场。卷目标拟定为 /var/lib/postgresql/data；实际固定镜像卷声明及入口行为尚待验证。初始化拟定 UTF8、libc、--locale=en_US.utf8（统一 locale 类别，不将其他类别视为已核验）、本地和 TCP 均 SCRAM-SHA-256；专用角色作为隔离实例 bootstrap superuser，禁止用于生产。凭据策略为专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD、32 字节随机数十六进制编码；本批不读取、生成、保存或输出任何真实凭据，不修改根 .env。实际初始化阶段不得提前开启阻止 bootstrap 的全局只读；初始化后未来受控连接必须验证默认只读设置。参数根据 PostgreSQL 17 initdb 文档 https://www.postgresql.org/docs/17/app-initdb.html 拟定，Docker 固定镜像实际初始化、SCRAM 本地认证及 locale 可用性仍需后续验证，失败不得降级、改变既有库或自动重试。创建计划 SHA-256 独立于原 CHECK 往返计划指纹。请求匹配器仅核对专用确认字符串与重新计算的创建计划指纹，不能认证操作者、消费一次性授权或发出 Docker 写命令；当前只读 CLI 不接受创建参数，没有实例创建入口。即使请求匹配，所有许可、creationAttemptClaimed 及完整运行时身份认证仍为 false。未来须在单独明确授权后实现并复验创建执行器、一次性记录、目标资源所有权与竞争检查、凭据传递、实际集群身份排除、排序规则、23 类空库及其他会话检查；不得将已匹配指纹当作真实写入授权。
+
+### 2026-11-27 · 停止态资源创建执行器增量验收
+
+以下仅执行离线测试及静态质量链（预计 56 项），不创建真实 Docker 资源。
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-create-stopped.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-create-stopped.cases.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-create-stopped &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-creation &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+正常提交和推送格式化变更后，在干净工作区复验原离线计划和已授权四库目录只读创建计划：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly
+Write-Host "创建计划只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+创建计划指纹仍为 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，creationAttemptClaimed=false。以上验收不需要凭据。不执行新 create-stopped 写入口，等待验收、合并及维护者专项授权后再给出实际执行命令。若真实创建阶段已登记，无论后续成功失败均保留 `.artifacts/prisma8-native-check-roundtrip-creation` 和资源，不删除以绕过一次性门禁。
+
+本批新增受控停止态资源创建执行器：固定 Windows 本机、已验收的专用确认字符串及创建计划指纹，专用凭据只接受 64 位小写十六进制格式，不将格式检查视为随机性证明。重新执行已授权的四库系统目录只读采集，并保留同一预检取得的本机 Docker 端点（不改变原公开报告）；严格复算创建计划并检查固定镜像 ID、唯一卷声明 /var/lib/postgresql/data、入口 docker-entrypoint.sh 和命令 postgres。首次 Docker 写命令前，在同一工作区根目录 `.artifacts/prisma8-native-check-roundtrip-creation` 原子独占创建目录并以 wx 及 flush 写入 attempt.json，记录固定指纹与 128 位随机尝试标识，不含凭据；路径链接、任何已有目录或登记失败均拒绝。依次创建专用 local 数据卷、bridge 网络、停止态容器，仅回环 127.0.0.1:15444 映射 5432，镜像 pull=never、restart=no、volume-nocopy，所有资源带固定 scope 与本次尝试标签；检查卷驱动、标签、无额外选项、容器占用，网络完整 ID、唯一名称、标签及端点占用，随后检查容器完整 ID、created 状态、固定镜像、卷挂载、HostConfig 端口配置、网络模式、禁止特权/自动移除/全部端口发布、入口及命令，最后复验卷与网络归属并独占保存 result.json。Docker volume create 同名可能复用，不能仅凭返回名称判成功；任何异常均停止、保留记录和部分资源，不清理、不重试、不启动。专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD 仅通过创建容器子进程 POSTGRES_PASSWORD 传递，不进入命令参数、报告、记录或源码；其他子进程仅继承既有系统白名单。不读取完整容器环境，Docker 管理员仍可访问容器保存的环境值，后续必须保护该本机凭据。停止态成功报告只描述观察到的资源及已消费的尝试记录；containerStarted、databaseInitialized、portReserved、resourceCreationAllowed、databaseExecutionAllowed、roundTripVerified 等均 false。停止态端口映射配置不等于实际端口绑定，卷标签及本地登记不能防御具备 Docker/文件系统管理权限的并发操作者或跨工作区故意重置；实际启动前须重新核验归属、容器配置、端口及证据。本批未创建真实资源、未运行 Docker start/SQL/迁移，不改变四个冻结库、历史证据或正式 Prisma 7。真实停止态创建必须在验收、合并后取得维护者单独明确授权；启动与初始化仍为后续独立阶段。
+
+## Prisma 8 全新安装验收（2026-11-27）
+
+维护者已启动 PostgreSQL 19.0、Redis 8.12.0、Keycloak 26.8.2，固定本机业务库 127.0.0.1:15432/adui_scada 初始为空。当前入口不要求旧迁移产物或历史验收数据库。
+
+```powershell
+pnpm run test:prisma8:fresh
+pnpm run test:prisma8:native:baseline:preflight
+pnpm run test:docker
+pnpm run test:docker:db
+pnpm run config:check
+vp check
+pnpm run messages:check
+pnpm run docs:check
+pnpm run db:prisma8:fresh:emit
+pnpm run db:prisma8:fresh:preview
+```
+
+预期官方发射及预览状态分别为 FRESH_CONTRACT_EMITTED、FRESH_DATABASE_PREVIEW_READY，业务对象十二表、八十五字段、三十六 CHECK、一百一十九注释，二十三类空库核验通过，新增操作四十五项或包含 public 命名空间的四十六项，databaseInitialized=false。具体官方 RC 输出须实际确认，不放宽门禁。新入口 `pnpm run docker:up` 过渡期仅启动基础设施；`pnpm run docker:db:init --confirm-initialize-empty-adui-scada` 是真实写入命令，不属于只读验收或 ready，须在预览通过、PR 合并且另行取得维护者明确授权后才执行。初始化后 `pnpm run docker:db:status` 严格核验结构、标记与中文注释。旧实验及历史迁移命令不再用于新库。
+
+### 初始化完成后的原生运行时评审
+
+PR #241 已实际完成全新数据库初始化和独立严格验证。不得重复 docker:db:init 或执行旧迁移。现阶段保持基础设施运行，先执行以下增量（db:generate 只生成旧客户端，不执行迁移，供过渡期现有服务端类型检查使用）：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+git diff --check
+Write-Host "运行时评审增量退出码：$LASTEXITCODE"
+```
+
+预期专项 17/17、7/7，Vite+ 零警告错误。提交推送格式化改动并确认工作区干净后，在已初始化的新本机业务库执行：
+
+```powershell
+pnpm run db:prisma8:fresh:runtime:review
+Write-Host "原生运行时只读评审退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_RUNTIME_REVIEW_READY、serverVersion=190000、databaseInitialized=true、nativeRuntimeTypesVerified=true、missingScopeVerified=true、readOnlyBoundaryVerified=true、providerSwitched=false；存储标识和对象计数与已验收首次初始化一致，退出 0。此步骤仅读系统目录和随机不存在工程的联合键，不写数据库，若类型、实际契约、身份或运行时不符，保留现场并按阶段诊断；不启动正式业务应用、不自动调整数据库。
+
+### Prisma 8 原生 Provider 装配验收
+
+先同步本批分支，保持已初始化的 PostgreSQL 19 基础设施运行。以下生成仅发射原生契约及过渡期旧客户端，不连接数据库，不执行迁移：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+pnpm run test:messages &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生提供方增量退出码：$LASTEXITCODE"
+```
+
+原生生成预期 FRESH_RUNTIME_CONTRACT_EMITTED、databaseAccessed=false；专项预期 25/25、7/7、2/2，Vite+ 零警告错误，服务端构建成功。提交推送格式化改动后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生提供方只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、providerReady=true、providerClosed=true、readOnlyBoundaryVerified=true、databaseInitialized=true、providerSwitched=false，原有存储指纹及对象计数保持一致，退出码 0。烟测不挂载 HTTP 业务模块、不写业务数据；若失败按固定阶段排查，禁止重复初始化或历史迁移。
+
+### Prisma 8 身份与 ACL 查询接入验收
+
+先执行离线生成及质量检查，不运行历史迁移、首次初始化或写入测试：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/auth/scada-identity.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生授权查询增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期全新专项 28/28（新增三项），原生运行时 7/7，新增仓储 Vitest 六项通过，旧身份、Guard、模块与 HTTP E2E 均通过；Vite+ 零警告错误、构建及增量退出 0。提交并推送格式化改动后保持原生业务库运行，执行既有只读烟测：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生授权查询只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、providerReady/providerClosed/readOnlyBoundaryVerified/authorizationReadVerified/missingProjectDenied/databaseInitialized=true、providerSwitched=false，存储指纹和对象计数不变、退出 0。原生查询在受控只读事务中读取随机不存在联合键，Guard 必须固定 404；不访问实际用户身份或授权业务值、不准备夹具、不写入数据库、不启动旧正式应用。历史隔离 DB 专项不连接当前新业务库。
+
+### Prisma 8 原生身份会话与 OIDC 事务候选验收
+
+保持已初始化业务库运行，不执行历史迁移、首次初始化或任何隔离库写入测试。先生成两代契约并执行如下增量：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/auth/prisma8-runtime-identity.service.spec.ts apps/server/src/auth/prisma8-auth-session.service.spec.ts apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/auth/scada-identity.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生身份事务增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期原生全新专项 28/28、运行时 7/7、原生身份 11 项（含 E-158 两项）、历史会话 4 项、历史 OIDC 5 项、原有身份与模块回归及 HTTP E2E 全部通过。完整 Vite+ 零警告错误，服务端构建通过，增量退出 0。提交并推送纯格式改动，确认工作区干净后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生身份事务只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期保留原 FRESH_PROVIDER_SMOKE_READY 全部成功标志，新增 sessionReadVerified=true、identityWriteDenied=true、oidcDiscoverySkipped=true；providerSwitched=false，存储指纹及对象数量不变，退出 0。该烟测不会写入实际身份、会话或 OIDC 行，不调用真实 IdP，不启动正式 HTTP 路由及清理定时器；真实并发消费、提交回滚及签发撤销需另行设计隔离数据验收并获明确授权。
+
+### Prisma 8 原生工程查询仓储候选验收
+
+保持已验收的原生本机业务库，不启动旧正式应用、不执行历史数据库专项、真实 DML 或初始化。先生成两代契约并执行增量：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/projects/prisma8-project-query-store.spec.ts apps/server/src/auth/prisma8-runtime-identity.service.spec.ts apps/server/src/auth/prisma8-auth-session.service.spec.ts apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/auth/scada-identity.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生工程查询增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期原生全新专项 28/28、原生运行时 7/7、原生工程查询新增十项、历史工程查询六项、原身份与装配六十项及新增装配一项、HTTP E2E 63/63，合计 175/175；Vite+ 零警告错误、NestJS 构建及增量退出 0。格式化改动正常提交推送后确认工作区干净，再执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生工程查询只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY，原有成功字段全部保留，新增 projectListReadVerified=true、projectLockedReadDenied=true，providerSwitched=false，存储指纹与对象数量不变，退出 0。随机不存在主体的工程列表为空；四项需要 FOR SHARE 的查询必须在严格只读配置提前拒绝，禁止自动改为可写模式或去掉锁。真实有权限工程的正向读取、锁并发、工程写入与正式 HTTP 装配另行验收。
+
+### 全新原生工程读写仓储验收（停止旧库专项）
+
+本批只验证当前原生业务路径；不要执行旧数据库迁移、历史接管对照或重置数据库。Windows 在当前候选工作区执行：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+vp test run apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "全新原生工程读写增量退出码：$LASTEXITCODE"
+```
+
+预计全新专项 28/28、原生写入 11/11、原生查询 10/10、模块装配 9/9，共 58/58。过渡期 db:generate 仍为当前全仓编译生成旧客户端，并非执行旧库迁移。格式化后正常提交推送并核对工作区，再运行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生工程读写只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、projectListReadVerified=true、projectLockedReadDenied=true、projectWriteDenied=true、providerSwitched=false，原指纹和结构不变。真实正向写入、并发及回滚须在明确授权的全新原生测试边界内验收；本命令不写业务数据。
+
+### 全新原生发布仓储增量验收
+
+只验证当前原生业务路径，禁止旧数据库迁移、接管对照、重复初始化或清库。Windows 在候选分支执行：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "全新原生发布仓储增量退出码：$LASTEXITCODE"
+```
+
+预期全新专项 28/28、原生运行时 7/7、原生发布与回滚 15/15、工程写入 11/11、查询 10/10、装配 9/9，共 80/80，Vite+ 零警告、零错误。过渡期 db:generate 仍为全仓编译离线生成旧客户端，不访问旧数据库。格式化改动正常提交推送并核对工作区，再执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生发布只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY；releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied=true，既有只读核验和指纹/结构不变、providerSwitched=false。严禁替换生产安全门禁以写入真实发布事件；本批不执行真实发布或回滚。
+
+### 正式原生根模块增量及 HTTP 验收
+
+在当前候选分支执行以下原生专项、HTTP E2E、质量检查及构建，不执行历史数据库专项、迁移实验或重复初始化。过渡期 db:generate 仍离线生成现有旧客户端以完成全仓编译，不连接旧数据库；清理后移除。旧 ready 含废弃实验门禁，本批不执行旧 ready，待清理后恢复完整正式质量链。
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+vp test run apps/server/src/auth/prisma8-runtime-identity.service.spec.ts apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "正式原生根模块增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 28+64+65=157 项；64 项原生 Vitest 包含身份 13、授权 6、查询 10、写入 11、发布/回滚 15、装配 9。要求零警告、零错误，增量退出 0。格式化正常提交并推送、工作区干净后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "正式原生根模块只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY，原有只读字段和结构指纹不变，nativeRootAssemblyVerified=true、singleNativeProviderVerified=true、legacyProviderAbsent=true、providerSwitched=true。此为正式根模块真实只读装配验证而非生产应用启动、真实业务写入或真实 Keycloak 登录；禁用自动清理调度，不开放回滚路由。
+
+### 原生 Docker 七服务增量验收
+
+已初始化库继续使用当前 .env 与已有凭据、卷及镜像。本次禁止重新初始化数据库。
+
+```powershell
+pnpm run env:check &&
+pnpm run test:docker &&
+pnpm run test:docker:db &&
+pnpm run test:prisma8:fresh &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生 Docker 增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 18 项、数据库配置保护 8 项、全新专项 29 项均通过且 Vite+ 零警告错误。完成本机格式化提交后运行：
+
+```powershell
+pnpm run test:docker:server &&
+pnpm run docker:up &&
+pnpm run docker:ps &&
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生 Docker 真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+期望七服务运行、容器原生只读及双端 HTTP 验证通过，真实宿主只读烟测结构指纹及全部标志不变。Docker HTTP 入口不启用 OIDC；SSE 核验为响应状态与类型，不代替真实浏览器渲染或消息序列验收。
+
+### 2026-11-27 · Docker 双端 HTTPS 传输候选验收
+
+PR #251 Windows 55/55 增量与真实七服务/原生只读验收已通过，集成基线为 71585ee998f6f6e72bf8042e231165128d7a9a76。新候选无需重新安装依赖、覆盖 .env、证书或随机凭据；若端口未配置采用默认 18480/18481。
+
+```powershell
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 专项失败" }
+pnpm run env:check && pnpm run messages:check && pnpm run docs:check && vp check --fix && vp check
+if ($LASTEXITCODE -ne 0) { throw "工程质量检查失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker HTTPS 验收失败，保留现场" }
+pnpm run docker:ps
+git rev-parse HEAD
+git status --short
+```
+
+预计 Docker 专项 22/22；启动成功须包含「容器原生只读及双端 HTTP 验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用」。手工打开 https://127.0.0.1:18480 与 https://127.0.0.1:18481，确认无证书错误、页面渲染和模拟运行；原 HTTP 入口仍可使用。若 mkcert 不可执行、CA 不匹配、端口冲突或响应异常，停止验收并保留现场；禁止关闭 TLS 校验、重置数据库或覆盖证书。宿主探针仅验证六路径响应头，不替代浏览器渲染、完整 SSE 消息序列、真实登录或写事务。
+
+### 2026-11-27 · Docker Keycloak Discovery/JWKS 独立候选验收
+
+集成基线为 PR #252 合并提交 b1218c0fd290344cf152500b4105e24ee9b29745。保留现有 .env、证书、随机凭据、数据库及持久卷，不执行初始化；当前候选的新探针需要进入 server 镜像，沿用既有一键启动。
+
+```powershell
+pnpm run test:docker &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "Keycloak 只读增量验收退出码：$LASTEXITCODE"
+```
+
+预期原 Docker 编排 25 项加新探针 10 项，共 35/35，Vite+ 零警告错误。随后真实本机验收：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "Keycloak 只读真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+期望原七服务及双端 HTTP/HTTPS 成功提示保持不变；新增「宿主与容器 Keycloak Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。若探针失败，根据宿主/容器、Discovery/JWKS 与固定诊断分类核查，不修改证书信任、Realm 或库以通过，不自动重试或清理现场。真实探针不进入 ready，仅离线回归纳入既有 test:docker。成功不能代替真实授权码、签名、Cookie、CSRF、身份映射或业务事务验收。
+
+### 2026-11-27 · 正式 OIDC Docker 传输验收
+
+保持现有 .env、公开 CA、随机凭据、七服务及原生数据库。先运行离线与构建质量链：
+
+```powershell
+pnpm run test:docker &&
+vp test run apps/server/src/auth/oidc-provider-discovery.service.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "正式 OIDC 增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 41 项通过（25 编排、10 探针、6 传输）；Discovery 9 项及回调 12 项预期全部通过；Vite+ 零警告错误。之后重建镜像并执行已存在的只读命令：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "正式 OIDC 只读真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期「宿主 Keycloak 与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。容器报告必须含 formalClientVerified=true，旧镜像不得通过；正式客户端 Discovery 或 JWKS 阶段失败时保留现场，不关闭 TLS、不换证、不重置或改写库，不提前打开登录。独立 probe 使用合成客户端配置，只进行 GET；真实 SDK 签名回归使用本地合成 Token/JWKS，不代表真实 Keycloak 授权码兑换。未授权的正式业务数据库连接或写入仍禁止。
+
+### 2026-11-27 · 常驻 Docker 原生只读数据库验收
+
+保持原根 .env、本机随机凭据、证书及数据库卷不变。先生成并构建服务端，再执行增量质量链：
+
+```powershell
+pnpm run build:server &&
+pnpm run typecheck:server &&
+pnpm run test:docker &&
+pnpm run test:e2e:server &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "常驻原生数据库增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 专项 49 项（26 编排、10 Discovery/JWKS、6 OIDC 传输、7 绑定）；全量服务端 E2E 含新增 5 项常驻模块及 1 项默认隔离测试，Vite+ 零警告错误。随后真实启动：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "常驻原生数据库真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+首次成功严格数据库验证后才创建 .local/docker-runtime/server-database.json；请勿查看、提交、粘贴或分享文件正文。重复启动核验相同绑定，不覆盖原文件；出现绑定不符或权限失败保留现场，不清卷、不重置、不放宽文件权限或 TLS、不手工改密码。预期七服务启动提示新增「常驻服务原生只读连接验证通过」，且旧容器烟测、双端 HTTP/HTTPS、正式 OIDC 只读探针仍通过；真实报告要求 runningDatabaseReadOnlyVerified=true。仅 server 运行进程回环访问 /health/database，其他容器拒绝，公开 Nginx /api/health/database 仍 404。若失败根据现有固定诊断排查。无实际业务写入、认证登录或生产权限扩展。
+
+### 2026-11-27 · 容器原生临时事务候选验收
+
+离线和常驻只读回归（新 Docker 专项预计 60 项，原 49 项加 8 项探针及 3 项编排；HTTP E2E 仍 71 项）：
+
+```powershell
+pnpm run typecheck:server &&
+pnpm run test:docker &&
+pnpm run test:e2e:server &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "原生临时事务增量验收退出码：$LASTEXITCODE"
+```
+
+要求 Vite+ 零警告/零错误，格式化改动按正常 Hook 提交并推送。新独立脚本需要构建镜像，保持现有 .env、绑定文件、数据库和卷，不运行初始化：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "常驻只读回归退出码：$LASTEXITCODE"
+```
+
+真实临时表事务必须在维护者明确确认允许当前本机业务库会话级 TEMP DDL/DML 后单独运行，不属于上述命令：
+
+```powershell
+pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe
+Write-Host "原生临时事务实机验收退出码：$LASTEXITCODE"
+```
+
+预期固定提示「原生临时表提交、回滚及清理验证通过；未写入正式业务表，常驻服务仍为只读」，退出码 0。缺少或额外确认参数在 Docker 调用前拒绝。前置核验失败、真实 SDK 不支持临时语句、提交/回滚或连接关闭异常必须停止并保留现场，不自动重试、改密码、重置、迁移或清卷。此命令会执行临时表 DDL/DML，非严格只读，不得用它替代真实身份、会话、工程业务表写入、ACL 或发布验收。

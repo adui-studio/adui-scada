@@ -1,7 +1,17 @@
-import { Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { PrismaService } from "../database/prisma.service.js";
+import {
+  AuthorizationReadStore,
+  copyAuthorizationPrincipal,
+  isAuthorizationIdentifier,
+} from "./authorization-read-store.js";
 import { hasProjectPermission } from "../projects/project-access-policy.js";
 import type { ProjectAccessAction } from "../projects/project-access-policy.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
@@ -9,13 +19,12 @@ import type { SecurityAuditReporter } from "../security/scada-security-audit.js"
 import type { ScadaAuthenticatedRequest } from "./scada-session.guard.js";
 
 export const SCADA_PROJECT_PERMISSION = "scada:project-permission";
-const PROJECT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 /** 工程级 Guard 仅做前置 ACL 保护；事务仓储仍必须在行锁内再次复核授权。 */
 @Injectable()
 export class ScadaProjectGuard implements CanActivate {
   constructor(
-    private readonly database: PrismaService,
+    @Inject(AuthorizationReadStore) private readonly authorization: AuthorizationReadStore,
     private readonly reflector: Reflector,
     @Inject(ScadaSecurityAuditService) private readonly audit: SecurityAuditReporter,
   ) {}
@@ -43,8 +52,8 @@ export class ScadaProjectGuard implements CanActivate {
       throw new NotFoundException("工程资源不存在或无权访问");
     }
     const request = context.switchToHttp().getRequest<ScadaAuthenticatedRequest>();
-    const principal = request.scadaPrincipal;
-    if (!principal) {
+    const verified = request.scadaPrincipal;
+    if (!verified) {
       this.audit.record({
         action: "project.authorize",
         outcome: "denied",
@@ -53,11 +62,19 @@ export class ScadaProjectGuard implements CanActivate {
       throw new UnauthorizedException("尚未建立可信身份上下文");
     }
 
+    const principal = copyAuthorizationPrincipal(verified.tenantId, verified.subjectId);
+    if (!principal) {
+      this.audit.record({
+        action: "project.authorize",
+        outcome: "denied",
+        reason: "permission_denied",
+      });
+      throw new NotFoundException("工程资源不存在或无权访问");
+    }
     const projectId = request.params?.projectId;
     const routeTenant = request.params?.tenantId;
     if (
-      typeof projectId !== "string" ||
-      !PROJECT_ID_PATTERN.test(projectId) ||
+      !isAuthorizationIdentifier(projectId) ||
       (routeTenant !== undefined && routeTenant !== principal.tenantId)
     ) {
       this.audit.record({
@@ -68,14 +85,12 @@ export class ScadaProjectGuard implements CanActivate {
       throw new NotFoundException("工程资源不存在或无权访问");
     }
 
-    const grants = await this.database.client.scadaProjectGrant.findMany({
-      where: {
-        tenantId: principal.tenantId,
-        projectId,
-        subjectId: principal.subjectId,
-      },
-      select: { permission: true },
-    });
+    let grants: readonly { readonly permission: string }[];
+    try {
+      grants = await this.authorization.readProjectGrants(principal, projectId);
+    } catch {
+      throw new ServiceUnavailableException("工程权限查询暂不可用，请稍后重试");
+    }
     const allowed = hasProjectPermission(
       principal,
       { tenantId: principal.tenantId, projectId },

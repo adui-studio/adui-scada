@@ -155,3 +155,7 @@ D2a 已通过维护者 Windows `ready` 并在 PR #103 Squash 合并至 main（`5
 D2b 已由 PR #104 合并到 main（`95c1c0e4b3423ba9acfcf425f3b82de304f04633`），发布指针自动刷新、超时、离线退避和失效保护已通过维护者 Windows 离线质量链。D3/D4 候选同步为 React/Vue 增加仅发布配置的只读运行页，复用独立 `release:read`、同源 Cookie 和共享发布状态机；无有效发布指针或权限则不显示配置快照，不从编辑 head、IndexedDB 或 Demo 兜底。
 
 本候选严格维持 ADR-0069 的只读优先与安全隔离：静态 SVG 仅预览白名单图元，Tag 质量 `UNAVAILABLE`，缺值 BAD 只是 SVG 占位；无真实网关和写入权限。当前未做真实 Keycloak/HTTPS 双框架 E2E 和生产安全评审，`ProjectReleaseSafetyGate` 保持 fail-closed。
+
+## 2026-11-27 · 全新 Prisma 8 原生仓储实现边界
+
+依 ADR-0073 仅推进当前全新业务数据库。内部回滚仓储使用 targetRevision、expectedReleaseGeneration（正安全整数）及 UUID v4 幂等键；同一租户工程中较早 PUBLISH 事件为目标已成功发布的证据，并匹配不可变快照摘要。现有编辑 head 不读取、不修改，发布代次独立 CAS；新键选择当前发布修订按冲突处理。同键同语义重放复用原回执，内部回执不包含未在事件中持久化的编辑 head。上述回滚回执及冲突选择为本批内部实现决策，公开 HTTP 契约仍需评审。发布与回滚共用固定拒绝安全门禁和事件/指针事务逻辑，未开放生产发布或回滚，不增加回滚 HTTP 路由，不改变 R-01 至 R-08 或工业安全边界。

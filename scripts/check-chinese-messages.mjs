@@ -4,7 +4,15 @@ import { join, relative, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const excluded = new Set(["node_modules", "dist", "target", "gen", ".git", ".agents", ".vite"]);
 // Prisma Client 由第三方生成，不能将它的英文注释视为本项目自有文案。
-const excludedPaths = new Set(["apps/server/src/generated/prisma"]);
+const excludedPaths = new Set([
+  "apps/server/src/generated/prisma",
+  "apps/server/src/generated/prisma8",
+  "apps/server/src/generated/prisma8-runtime",
+  // 独立离线候选包含官方迁移脚手架和快照声明，不属于自有文案。
+  "apps/server/.artifacts/prisma8-native-baseline-comments",
+  "apps/server/.artifacts/prisma8-native-repro-candidate",
+  "apps/server/.artifacts/prisma8-native-check-repair-package",
+]);
 const paths = [".env.example", ".editorconfig", ".gitattributes", ".gitignore", ".dockerignore"];
 const extensions = /\.(?:ts|tsx|js|mjs|vue|css|rs|toml|yaml|yml|html)$/;
 

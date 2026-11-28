@@ -1,44 +1,20 @@
 import { Module } from "@nestjs/common";
 import * as oidc from "openid-client";
-import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
-import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
-import { DatabaseModule } from "../database/database.module.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
-import { AuthSessionService } from "./auth-session.service.js";
-import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
 import {
   OidcCallbackService,
   SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
 } from "./oidc-callback.service.js";
+import { Prisma8IdentityModule } from "./prisma8-identity.module.js";
 import { ScadaAuthController } from "./scada-auth.controller.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
-import {
-  OidcProviderDiscoveryService,
-  SCADA_OIDC_STARTUP_CONFIG,
-} from "./oidc-provider-discovery.service.js";
 
-/**
- * 仅在显式启用 OIDC 的根模块中加载身份路由与会话服务。
- * PrismaService 由共享 DatabaseModule 提供，避免与工程仓储重复连接数据库。
- */
+/** 正式 OIDC HTTP 身份模块；身份、会话、授权和登录事务统一使用原生提供方。 */
 @Module({
-  imports: [DatabaseModule],
+  imports: [Prisma8IdentityModule],
   controllers: [ScadaAuthController],
   providers: [
-    {
-      provide: SCADA_OIDC_STARTUP_CONFIG,
-      useFactory: (): EnabledOidcConfig => {
-        const config = resolveOidcStartupConfig(process.env);
-        if (!config.enabled) {
-          throw new Error("OIDC 身份模块只能在显式启用后加载");
-        }
-        return config;
-      },
-    },
-    AuthSessionService,
-    OidcProviderDiscoveryService,
-    OidcLoginTransactionService,
     {
       provide: SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
       useValue: oidc.authorizationCodeGrant,
@@ -49,15 +25,10 @@ import {
     ScadaProjectGuard,
   ],
   exports: [
-    // 工程控制器声明 @UseGuards 后，Nest 会在 ProjectApiModule 上下文解析 Guard 的依赖。
-    // 除 Guard 类本身，还必须显式导出共享数据库、审计服务与可信 OIDC 配置。
-    DatabaseModule,
-    SCADA_OIDC_STARTUP_CONFIG,
-    ScadaSecurityAuditService,
-    AuthSessionService,
-    OidcProviderDiscoveryService,
-    OidcLoginTransactionService,
+    // 工程控制器上下文需要原生身份端口、可信配置及两个 Guard 的完整依赖。
+    Prisma8IdentityModule,
     OidcCallbackService,
+    ScadaSecurityAuditService,
     ScadaSessionGuard,
     ScadaProjectGuard,
   ],

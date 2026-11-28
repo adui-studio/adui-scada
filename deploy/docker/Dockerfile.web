@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:1
-# 仅供 V0.1 演示的静态 Web 构建，Vue 和 React 共用此 Dockerfile。
-FROM node:24.22.2-bookworm AS build
+# 本机 HTTP/HTTPS 演示的静态 Web 构建，Vue 和 React 共用此 Dockerfile。
+FROM node:24.18.0-bookworm AS build
 WORKDIR /workspace
-RUN npm install --global pnpm@12.18.0
+RUN npm install --global pnpm@12.23.0
 COPY . .
 RUN pnpm install --frozen-lockfile
 ARG WEB_APP=web-react
 RUN case "$WEB_APP" in web-react|web-vue) ;; *) exit 1 ;; esac \
     && pnpm --filter "@adui/scada-${WEB_APP}" run build
 
-FROM nginx:stable-alpine
+FROM nginx:latest
 ARG WEB_APP=web-react
 COPY --from=build /workspace/apps/${WEB_APP}/dist/ /usr/share/nginx/html/
 COPY deploy/docker/nginx.conf /etc/nginx/templates/default.conf.template
-EXPOSE 8080
+EXPOSE 8080 8443

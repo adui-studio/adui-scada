@@ -1,64 +1,76 @@
-# ADui SCADA · Docker 本机全新安装
+# ADui SCADA · Docker 本机全新安装与启动
 
-只维护一份 `deploy/docker/compose.yaml`，项目名 **`adui-scada`**。共有七个独立服务：`web-react`、`web-vue`、`server`、`demo`、`postgres`、`redis`、`keycloak`。**只有一个 PostgreSQL 17 容器**，其中的 `adui_scada` 是业务数据库、`adui_scada_keycloak` 是 Keycloak 的独立逻辑数据库。
+唯一 Compose 文件为 `deploy/docker/compose.yaml`，项目名 **adui-scada**。七个服务为 web-react、web-vue、server、demo、postgres、redis、keycloak。业务库和 Keycloak 库使用同一个 PostgreSQL 19 实例中的独立逻辑数据库；正式业务结构由 Prisma 8 原生契约管理。仅用于 Windows 本机 Docker Desktop 的 Linux 引擎，不是生产部署。
 
-## 第一次安装
+## 已初始化的本机环境
 
-前提为 Docker Desktop 已启动、Node/pnpm 依赖已安装、`mkcert` 已安装及本机根证书已信任。本方案仅用于回环本机开发/演示，不可直接用于生产。
-
-```powershell
-# 如果仓库根目录仍有旧 .env，先在本机保存备份，不输出其中的密钥。
-if (Test-Path .env) {
-    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
-}
-Copy-Item .env.example .env -Force
-
-pnpm run docker:plan
-if ($LASTEXITCODE -ne 0) { throw "Docker 安装预检失败" }
-pnpm run docker:up
-if ($LASTEXITCODE -ne 0) { throw "Docker 全新安装或数据库初始化失败" }
-pnpm run docker:ps
-```
-
-`docker:up` 会准备 `.local/docker/` 下 Git 忽略的 **随机密码与本机 TLS 证书**，验证唯一 Compose 配置并创建 **`adui-scada_postgres-data`**、**`adui-scada_redis-data`** 两个新卷，启动七个容器，随后将现有 Prisma 迁移部署到新业务库 `adui_scada`。已有本地秘密文件不会自动被覆盖；密码不会写入仓库模板。`docker:db:init` 可在服务已运行后重试幂等的 Prisma 迁移。
-
-**历史情况**：维护者已删除三个旧 Docker 项目与数据卷，且没有数据库备份。因此这是新安装，不是迁移或恢复。以前的 Keycloak 用户、SCADA 身份预绑定、工程历史和旧会话都不会自动回来。如果 Docker Desktop 实际仍有旧项目容器，预检会拒绝自动清理；请先自行确认。
-
-## 日常命令
+保留现有根目录 .env、.local/docker/、证书、随机凭据和 Docker 数据卷，不重新复制或覆盖。已有 PostgreSQL 19 原生业务库直接执行：
 
 ```powershell
 pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker 一键启动验收失败，保留现场" }
 pnpm run docker:ps
-pnpm run docker:logs
-pnpm run docker:down
-pnpm run docker:db:init
 ```
 
-`docker:down` 不带 `-v`，保留新卷；第二次 `docker:up` 不会重置密码、Keycloak 账户或已部署的表。严禁为排错随意执行 `down -v` 或 `docker volume rm`。
+恢复唯一 adui-scada Compose 七服务一键启动，新增 docker:infra 保留三服务基础设施入口。docker:up 先准备本机随机凭据与证书、验证 Compose 和固定本机 Linux Docker Desktop 命名管道，等待基础设施，再执行已有 Prisma 8 --status 官方严格结构/标记及真实中文注释只读验证；只在成功后构建并启动 server、demo、web-react、web-vue，等待应用服务运行。容器内显式探针经 server 的 lab 网络访问固定 postgres:5432/adui_scada，必须严格只读且与宿主验证的 PostgreSQL 集群 systemIdentifier 一致；复用正式原生根模块全部只读核验与关闭流程。凭据从现有 Git 忽略的随机秘密文件读取，仅经 docker exec -T 标准输入传给一次性探针，不进入服务环境、命令行或报告。两端 Web 探针验证容器网络内静态入口、/api/health、/demo/project、/demo/events 的响应状态及 SSE 内容类型、受保护工程路由保持 404。宿主默认连接白名单和正式数据库生产禁令保持不变。Docker HTTP Server 仍显式关闭 OIDC，不开放身份、工程或设备写入接口；Keycloak 本轮仅验证容器启动，不验证真实登录、JWKS、HTTPS 回调、Cookie 或双端浏览器渲染。不存在数据库自动初始化、迁移、清卷、失败回退、旧库接管或自动授权。
 
-| 服务                                      | 本机入口                  |
-| ----------------------------------------- | ------------------------- |
-| React Docker HTTP Demo                    | `http://127.0.0.1:18080`  |
-| Vue Docker HTTP Demo                      | `http://127.0.0.1:18081`  |
-| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15432`         |
-| Redis                                     | `127.0.0.1:16379`         |
-| Keycloak HTTPS                            | `https://127.0.0.1:18443` |
+## 首次安装（只用于确认全新的空库）
 
-**OIDC 安全边界**：根 `.env.example` 的 OIDC 默认关闭，HTTP Demo 不能替代 WebStorm Vite HTTPS 的受保护工程 API。Keycloak Realm 将重新导入，但普通用户和对应的本地可信身份映射需要重新创建；不会自动授予工程写权限。真实 OAuth 回调、Secure Cookie、CSRF、ACL 和 Vue/React 会话互通仍须在新空库上重新验收。
+Docker Desktop、Node/pnpm 依赖、mkcert 及本机可信根证书须已准备，三个基础设施镜像须已在本机存在。仅在不存在 .env 时复制模板，不覆盖既有配置。先启动基础设施并运行官方只读预览：
 
-Prisma 首次迁移是幂等的 `migrate deploy`，不是 `migrate reset`。单镜像生产交付不在本次范围内。
+```powershell
+pnpm run docker:infra
+pnpm run db:prisma8:fresh:preview
+```
 
-## Docker 数据库迁移状态（本机随机凭据）
+如果确实为全新空库，预览通过后须获得维护者独立明确授权，才执行 ADR-0073 所记录的显式首次初始化命令；不得将初始化嵌入 docker:up。随后执行 docker:db:status 与 docker:up。若库已初始化，只运行状态检查和正常启动；任何结构、标记或中文注释不一致都停止本次应用启动，不重试写入。
 
-`pnpm run docker:db:init` 使用 `.local/docker/secrets.env` 中首次安装的随机数据库密码，2026-11-16 维护者已在 `adui_scada`（`127.0.0.1:15432`）实际成功应用四项 Prisma 迁移，退出码 0；容器内 `pg_isready` 和 `SELECT 1` 也已通过。旧的通用 `pnpm run db:migrate:status` 从根目录 `.env` 读取手动填写的数据库 URL，若仍是历史测试密码会出现 **P1000**，这与已成功迁移的 Docker 数据库不矛盾。
+## 访问与验收
 
-**Docker 本机实例应使用：**
+| 服务                     | 默认本机入口            |
+| ------------------------ | ----------------------- |
+| React Docker HTTP        | http://127.0.0.1:18080  |
+| Vue Docker HTTP          | http://127.0.0.1:18081  |
+| React Docker HTTPS       | https://127.0.0.1:18480 |
+| Vue Docker HTTPS         | https://127.0.0.1:18481 |
+| PostgreSQL（两个逻辑库） | 127.0.0.1:15432         |
+| Redis                    | 127.0.0.1:16379         |
+| Keycloak HTTPS           | https://127.0.0.1:18443 |
+
+HTTP 与 HTTPS Web 入口当前都只提供匿名演示，不代表 OIDC 已启用。真实 Keycloak 登录、双端回调、Secure Cookie、CSRF、ACL 和真实写事务后续独立验收，不自动创建用户或授予工程权限。HTTP 就绪探针只代表 HTTP 子系统；数据库就绪由独立原生探针验证。
 
 ```powershell
 pnpm run docker:db:status
-if ($LASTEXITCODE -ne 0) { throw "Docker 数据库迁移状态检查失败" }
+pnpm run docker:ps
+pnpm run docker:logs
+pnpm run docker:down
 ```
 
-该命令复用 `scripts/init-docker-db.mjs --status`，在子进程环境中优先使用已存在的本机 Docker 随机凭据，只运行**只读** `prisma migrate status`；不会显示密码、修改根 `.env`、重建容器、删除卷或重置数据库。通用 `db:migrate:status` 继续支持显式配置的其他数据库，但它的 `.env` 密码必须与目标数据库相同。
+docker:down 不删除卷，禁止为排错执行 down -v、删除持久化卷或重置数据库。docker:up 使用已有基础设施镜像，不主动升级基础设施版本；失败时保留现场。不读取或输出真实凭据，不自动修改根 .env。
 
-如果要让宿主机 NestJS 的真实 OIDC 连接新 Docker 数据库，必须由维护者在本机**安全地同步** `SCADA_DB_PASSWORD`、`SCADA_DATABASE_URL` 与 `.local/docker/secrets.env` 的数据库凭据；Keycloak Client Secret、OIDC 事务密钥也应与新生成的本机凭据一致。HTTPS 证书从新的 `.local/docker/localhost.pem` 和 `localhost-key.pem` 读取，旧 `.local/oidc-lab` 路径不代表新部署。避免输出或提交任何秘密；已在对话中披露的历史密钥应受控轮换。新环境尚需重新创建 Keycloak 普通用户和预绑定可信身份，不得绕过认证或自动授予工程权限。
+## 当前验证状态
+
+维护者 Windows 已完成 PR #250 最终复验：中文注释 2/2、OIDC 身份 14/14、全新安装 28/28、CLI 4/4、82 个文件 966/966 单测、6 个文件 65/65 HTTP E2E；498 格式文件、339 受检零警告/Lint/类型错误，中文 365 个自有文件、文档 97 份，React/Vue/NestJS 构建通过。React 单个 chunk 591.62 kB 的构建体积警告暂保留。锁文件刷新与冻结安装已通过，移除 Prisma 7 三项直接依赖及 98 个包。真实 PostgreSQL 19 只读 FRESH_PROVIDER_SMOKE_READY，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，所有原生根模块及只读标志为 true，最终退出码 0、工作区干净。远端验收提交 dbab7c2a7ca3737e23fd451811aef92981378801，维护者明确授权，PR #250 已 Squash 合并至 feat/mvp-first-integration 的 94106b29b328833d944f35361004411b5a3ddab2。E-160 已关闭。
+
+协作环境 Node.js 22.16.0 对从当前远端原生 URL 解析函数提取的类型擦除片段及同等参数断言运行 node --test，2/2 通过（宿主两模式不变；容器允许路径及九种非法配置拒绝）。从远端启动编排和测试文件提取新增/调整的四个模拟编排用例，在 V8 隔离环境以基础等价断言执行，4/4 通过（启动顺序及秘密仅标准输入、数据库失败不启动本次应用、烟测失败不报告成功、基础设施入口独立）。这不是完整仓库 Node/Vitest 测试或真实 Docker 验收。Docker、pnpm、Vite+ 及固定依赖在协作容器不可用，Git 网络 DNS 不可达；Windows 增量测试、完整构建和实际七容器启动待验收。
+
+## 2026-11-27 · 本机双端 HTTPS 候选
+
+保留既有 HTTP 18080/18081，新增 React 18480 和 Vue 18481 的 HTTPS 回环发布端口，分别可由根环境变量 SCADA_REACT_HTTPS_PORT、SCADA_VUE_HTTPS_PORT 配置；旧 .env 缺少两项时使用默认值，不必重新复制。两个 Web 容器各自仅只读挂载既有 localhost.pem 和 localhost-key.pem，不挂载凭据目录或根 CA 私钥。共用 Nginx 模板启用 TLS 1.2/1.3，并保留原同源静态资源、健康、模拟工程、SSE 代理与受保护路由拒绝规则。
+
+原容器数据库及 HTTP 探针通过之后，docker:up 运行宿主 HTTPS 探针，以 mkcert -CAROOT 获取公开 rootCA.pem，明确验证证书链及回环 IP；不关闭 TLS 校验，不导入信任设置，不跟随重定向，不记录业务正文。每端检查六个固定 GET 路径及状态/内容类型，SSE 仅接受 no-store（允许重复），读取响应头后主动关闭连接；工程与 OIDC 回调必须 404。两端均通过才报告启动完成；失败不清理现场。本机需保持 mkcert 可执行及现有签发 CA 可读取；本批不修改 Keycloak Realm、会话、权限或数据库写入。真实浏览器、OIDC Discovery、回调和跨端登录另行验收。
+
+PR #251 已由维护者完成 Windows 55/55 增量专项、零警告 Vite+、真实 Linux 容器隔离及 SIGTERM、七服务启动和原生只读烟测，Squash 合并提交 71585ee998f6f6e72bf8042e231165128d7a9a76。本批局部 Node TLS 与 Nginx 实测通过；新增 4 项安全断言后完整 test:docker 预计 22 项，真实 Windows 双端 HTTPS Docker 仍待复验。
+
+## 2026-11-27 · Keycloak Discovery/JWKS 独立只读候选
+
+维护者 Windows 在候选 HEAD 3e677cd2dca74b0d621cb8bed029018f8b5e62a0 实测 Docker 22/22、环境和 LF、中文文案 367 文件、Markdown 97 份、Vite+ 500 格式/341 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP 及宿主 HTTPS 探针均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 56f48c2f81e9df95f9d97253098abef300ea665d 已推送，远端三文件差异仅 Markdown 围栏及 JavaScript 排版，无业务变化；无审查阻塞或额外远端 CI 记录。经维护者明确授权 PR #252 Squash 合入 feat/mvp-first-integration 的 b1218c0fd290344cf152500b4105e24ee9b29745。E-161 已关闭。日志未包含双端真实浏览器渲染证据，不将其视为浏览器或登录验收。
+
+原 docker:up 成功契约、七服务拓扑、Realm 与数据库不变。新增独立命令，仅在应用镜像包含新探针且现有栈已经启动后人工执行：
+
+```powershell
+pnpm run docker:oidc:probe
+if ($LASTEXITCODE -ne 0) { throw "Keycloak 只读验收失败，保留现场" }
+```
+
+宿主访问 https://127.0.0.1:18443/realms/adui-scada，端口复用根 SCADA_LAB_KEYCLOAK_PORT；服务端容器固定连接 keycloak:8443，HTTP Host 与 TLS 证书身份仍匹配公开 Issuer（127.0.0.1）。仅以 mkcert 公开根证书为受控信任锚，规范化证书后经标准输入传递给两个一次性探针，不安装或修改系统 CA、不读取任何私钥、Client Secret、Cookie 或数据库凭据。两个视角各 GET 固定 Discovery 和 JWKS 路径，禁止重定向、固定 8 秒请求期限、256 KiB 响应上限；必须匹配公开 Issuer、授权/Token/JWKS 端点及 Authorization Code、PKCE S256、RS256、client_secret_basic 等能力。真实 RSA 公钥解析、至少 2048 位、重复 kid 和私钥字段拒绝，排序无关的签名公钥集合摘要必须一致。诊断按宿主/容器及 Discovery/JWKS 阶段脱敏，不输出原文。该命令不启动或清理任何容器，不启动 OIDC 模块，不连接业务数据库；不属于默认 ready 的真实联调链。当前同一叶证书在本机服务间复用，不能把本机 TLS/公钥一致性探针视为生产服务独立身份认证或 ID Token 验签。新镜像的真实 Windows 联调待验收。

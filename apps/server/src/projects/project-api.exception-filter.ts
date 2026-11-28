@@ -6,12 +6,12 @@ import {
   ProjectRevisionConflictError,
   ProjectRevisionNotFoundError,
   ProjectVersionAccessDeniedError,
-} from "./prisma-project-version-store.js";
+} from "./project-version-store.js";
 import {
   ProjectReleaseConflictError,
   ProjectReleasePreflightRejectedError,
   ProjectReleaseSessionInvalidError,
-} from "./prisma-project-release-store.js";
+} from "./project-release-store.js";
 import { ProjectReleaseGateUnavailableError } from "./project-release-safety-gate.js";
 
 interface ProjectApiHttpResponse {

@@ -1,5 +1,7 @@
 # ADui SCADA
 
+> 2026-11-27 原生收敛： 当前数据库路线：只使用 PostgreSQL 19 与 Prisma 8 原生契约。旧迁移及兼容实验已停止；正式原生根模块切换通过维护者 Windows 验收。清理分支仍待依赖锁刷新及全量验证，已有本机业务库不得重新初始化。
+
 ADui Studio 维护的开源工业 SCADA / HMI 研发项目。**当前提供模拟运行、受控的发布快照只读预览与双框架组态编辑子集，不是可用于现场生产控制的 SCADA 系统。**
 
 ## 已实现的主要研发子集
@@ -20,7 +22,7 @@ ADui Studio 维护的开源工业 SCADA / HMI 研发项目。**当前提供模�
 
 所有第三方依赖版本在 `pnpm-workspace.yaml` Catalog 中维护，包间使用 `workspace:*`。TypeScript 采用 6.0.3，测试统一使用 Vite+ 集成的 Vitest。
 
-环境按仓库 package.json：Node >= 22.18.0，pnpm 12.18.0，Vite+ 1.5.0。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
+环境按仓库 package.json 与 Catalog：Node.js 24.18.0，pnpm 12.23.0，Vite+ ^1.8.0（配套 Vite 与 Vitest 精确匹配）。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
 
 ```powershell
 pnpm install

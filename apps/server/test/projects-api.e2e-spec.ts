@@ -25,24 +25,24 @@ import type {
   ProjectAccessAction,
 } from "../src/projects/project-access-policy.js";
 import {
-  PrismaProjectVersionStore,
+  ProjectVersionStore,
   ProjectRevisionConflictError,
   ProjectAlreadyExistsError,
   ProjectRequestValidationError,
-} from "../src/projects/prisma-project-version-store.js";
+} from "../src/projects/project-version-store.js";
 import type {
   ProjectSummary,
   ProjectReleasePreflightSummary,
-} from "../src/projects/prisma-project-version-store.js";
+} from "../src/projects/project-version-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
-import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectReleaseStore } from "../src/projects/project-release-store.js";
 import type {
   ProjectCurrentReleaseResult,
   ProjectReleaseResult,
-} from "../src/projects/prisma-project-release-store.js";
+} from "../src/projects/project-release-store.js";
 import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
-import { PrismaService } from "../src/database/prisma.service.js";
+import { AuthorizationReadStore } from "../src/auth/authorization-read-store.js";
 import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
 import type { SecurityAuditDecision } from "../src/security/scada-security-audit.js";
 
@@ -198,8 +198,8 @@ describe("工程 API HTTP 接口（端到端）", () => {
     }),
   };
 
-  const grantLookup = vi.fn<(args: unknown) => Promise<Array<{ readonly permission: string }>>>(
-    async () => permissions.map((permission) => ({ permission })),
+  const grantLookup = vi.fn<AuthorizationReadStore["readProjectGrants"]>(async () =>
+    permissions.map((permission) => ({ permission })),
   );
   const auditRecords: SecurityAuditDecision[] = [];
   const audit = {
@@ -207,11 +207,10 @@ describe("工程 API HTTP 接口（端到端）", () => {
       auditRecords.push(decision);
     },
   };
-  const database = {
-    client: {
-      scadaProjectGrant: { findMany: grantLookup },
-    },
-  };
+  const authorization = {
+    readProjectGrants: grantLookup,
+    findActiveExternalIdentity: () => Promise.resolve(null),
+  } satisfies AuthorizationReadStore;
 
   beforeAll(async () => {
     snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
@@ -221,10 +220,10 @@ describe("工程 API HTTP 接口（端到端）", () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [ProjectApiController],
       providers: [
-        { provide: PrismaProjectVersionStore, useValue: store },
-        { provide: PrismaProjectReleaseStore, useValue: releases },
+        { provide: ProjectVersionStore, useValue: store },
+        { provide: ProjectReleaseStore, useValue: releases },
         { provide: AuthSessionService, useValue: sessions },
-        { provide: PrismaService, useValue: database },
+        { provide: AuthorizationReadStore, useValue: authorization },
         { provide: ScadaSecurityAuditService, useValue: audit },
         { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: createConfig() },
         ScadaSessionGuard,

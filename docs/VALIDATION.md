@@ -1,5 +1,9 @@
 # ADui SCADA · 文档校验机制
 
+> 2026-11-27 原生收敛： PR #249：Windows 28+64+65=157 项全部通过，621 文件格式化、459 文件无警告/类型错误，中文检查486文件、文档97份；真实 PG19 只读烟测四项原生标志均 true，指纹与 12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释保持一致，退出 0。验收 HEAD `567ca65e392db29c16abf61106df444abad1c120`。后续删除旧数据库路径的分支尚未通过 Windows 构建、测试、依赖锁刷新或真实烟测。
+
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 ## 执行
 
 ```powershell
@@ -4757,3 +4761,731 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 新增 9 项正式测试定义，覆盖空缓冲/上限、成功确认及序号、模拟提交后回执丢失、七类错配回执、同步异常、并发提交、单写入者、复合键范围及外部批次改变。既有五份 46 项继续回归，目标六份共 55 项。协作容器 Node.js 22.16.0 独立 node:test 共 30/30（新增持久化 9 项、既有归档 8 项、采样 13 项）通过，0 失败。新增测试采用原 Vitest 用例逻辑及 Node 断言适配（仅替换测试入口及相对导入）；既有归档、采样为此前独立对应场景。源码本地 Git Blob：tag-history-persistence.ts 9a9d52cfbaec98c7ca82cee942a762df953b0d54、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b；新增仓库测试还原导入后的 Blob f5e514878ad8306431c4d107149bfc3665e07dce。未运行正式 Vitest、Vite+ 或完整 ready；模拟端口不代表真实数据库事务、幂等约束或崩溃恢复。
 
 Windows 待执行 `vp check`、`vp test run packages/core/test/tag-history-persistence.test.ts packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`pnpm run messages:check`、`pnpm run docs:check`；完整 ready 待执行。
+
+### D5c7 首个 MVP 集成分支验收矩阵（待执行）
+
+D5c6 的维护者实际定向结果：vp check 463 格式/305 受检零警告错误，六文件 55/55，messages:check 332 文件，docs:check 95 份。合并提交 4aabaa8a49e944daa3fe3c4232edc3f22cc7dd0c。
+
+D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模拟 Runtime 3 项。真实数据库测试仅允许显式 SCADA_TEST_DATABASE_URL 指向本机 adui_scada_test，新增迁移须先验证 Prisma Schema、生成 Client，再经明确隔离环境授权部署；不执行 reset，不使用普通开发库/生产库。完整门禁包含 ready、UI/Studio、Tag CRUD、工程互通、草稿安全、版本及多标签、历史迁移、发布预检、SSE 与故障恢复。新增双端导入模拟验收：由 Studio 导出同一工程，另一框架导入运行；选择多页面，验证类型匹配、unknown BAD、不访问服务器、趋势单 Tag 和 CSV 真实质量；错误 JSON 保持当前会话，切换/返回/离开清理定时器，正式发布路由不变。模拟导出不代表数据库历史查询。未执行的门禁一律标为待执行，不要求维护者逐小批复验。
+
+#### D5c7 独立契约检查记录
+
+协作环境通过 GitHub 读取当前源码，针对实际历史缓冲、规范编码与本地模拟模块仅擦除 TypeScript 类型后进行独立 JavaScript 执行，工程解析使用已校验形状的替身，时钟与定时器采用可控替身。8/8 场景通过：原始值及质量往返、负零保留、批次与派生字段边界、损坏记录拒绝、模拟快照类型、单订阅及 120 秒窗口、切换隔离与停止回收、趋势断点及 CSV 文本保护。来源 Blob：tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-history-record-codec.ts 5f6eefe3c3ef2c28a726b1b3ef4a606e4f132110、local-project-simulation.ts 6d8ff8b7d342f4152d4a0d06986ba93a6942050c。
+
+另外对 schema.prisma b4d60d7122f13a0e8f3da9fc3fa54c79c9372816 与 migration.sql 8eafcbee4bb2c7c7101b7f1e68d8834ccd7db9d6 独立静态检查 8/8：单事务、两表及 15 个物理字段中文注释、关联说明、复合外键名称、查询索引和反向关系。现有全新库迁移验证脚本动态枚举迁移目录，无须固定数量调整。
+
+以上不是正式 Vitest、Prisma validate、Vite+、类型检查、真实数据库或浏览器验收。协作容器 Node.js 22.16.0 低于仓库最低 22.18.0，未安装 pnpm/Vite+，无法解析 GitHub 与 npm Registry 域名；PR #198 初始提交未返回 CI 运行记录。保留 Draft，继续将完整质量链及实际浏览器作为统一验收前置条件，不请求维护者执行中间定向验收。
+
+#### D5c7 · E-131 React 运行页语法阻塞修复
+
+维护者 Windows 首次执行 PR #198 的 vp check --fix 在 RuntimePage.tsx:123:4 遇到 Unexpected token，格式化失败，后续质量门禁未执行。远端旧 Blob d2a50e98e4d0277990dacbbc87e6025deba83811 经完整文件回读确认残留旧 Effect 和重复 svg 声明。仅删除残留；修复提交 15f98671dfe5f8a01c35f463b0b1cdeb040faef2 的 Blob 5ce8ad1f52d20b72a3d0c7ce5f7d8ca845e148fb 与容器完整文件 git hash-object 一致。Node.js 22.16.0 / TypeScript 5.8.3 的 TSX createSourceFile 解析诊断由 3 条降至 0 条；未执行项目真实 TypeScript 6、Vite+、Lint、Vitest、数据库和浏览器。维护者先在最新分支执行 vp check --fix、vp check 与 pnpm run typecheck:web，再继续统一验收。
+
+#### D5c7 · E-131/E-132 实测及 E-133 修复
+
+维护者 Windows 按 db:validate → db:generate → build:core → vp check --fix → vp check 执行，Prisma 7.10.1 Schema 校验/Client 生成、Core 编译完成；469 文件格式正确、311 受检文件零警告错误。原 TSX 语法阻塞与因旧生成产物造成的 25 项类型错误消失。独立 Web 检查在 React tsc --build 报 4 项 TS1294，后续检查尚未运行；日志无 HEAD，不将结果严格绑定到某提交。
+
+修复共享 Core 两个历史类的四个参数属性，改为显式只读字段赋值；远端提交 b0c1d7f7fc4eccbe91d9c46431f34a3bd599290e、1098b214e4d89fa98719ce017aca99765510dc37。协作端使用 Node.js 22.16.0/TypeScript 5.8.3，对实际构造函数摘录（最小依赖类型声明）执行启用 erasableSyntaxOnly 的严格编译实验，修复前四项 TS1294、退出码 2，修复后零项、退出码 0；Node 原生类型擦除构造验证通过。该实验不代替完整 TypeScript 6 项目检查。
+
+本次复验顺序：db:validate、db:generate、build:core、vp check --fix、vp check、typecheck:web、typecheck:server、messages:check、docs:check。前序门禁通过后再运行原有历史专项、ready 与隔离数据库及双端浏览器验收。禁止根据本次局部检查执行自动合并或生产数据库操作。
+
+#### MVP · 依赖升级独立分支验收门禁（待执行）
+
+维护者此前 Windows 日志显示旧依赖下 Prisma 校验及生成、Core 构建、Vite+ 469 格式文件及 311 受检零警告错误、独立 Web/Server 类型检查、79 文件 956/956 单测、6 文件 63/63 HTTP E2E、React/Vue 构建通过；该记录不能覆盖新依赖。
+
+升级候选按维护者 Registry 输出更新 Catalog，普通外部 npm 依赖采用 ^，TypeScript 固定 6.x 范围。Vite/Vitest 保留与已安装 Vite+ 精确配套的版本，依赖检查脚本将核对其实际 package.json 声明。Prisma 8 RC 需要单独迁移，不改变现有 Schema、迁移、事务或安全门禁。按维护者最新要求保留 Node.js 24.18.0、Node 类型 ^24.19.2，三个 Dockerfile 使用 Node 24.18.0 基础镜像。维护者已报告全局 vp upgrade 从 1.5.0 成功更新为 1.8.0，项目内依赖安装、pnpm 12.23.0、Tauri Rust 依赖及新版 Docker 镜像仍待实际验证。
+
+实际验收顺序：Node.js 24.18.0 与 pnpm 12.23.0 → pnpm install --no-frozen-lockfile → pnpm install --frozen-lockfile → pnpm run deps:check → Prisma Schema 校验/Client 生成 → Core 构建 → vp check --fix / vp check → 独立 Web/Server 类型检查及完整 ready。桌面端在原 Cargo.toml 所在目录执行 cargo update、cargo check --locked，并复验两端 MSI 构建。提交真实生成的两份锁文件前不得合并。Docker 镜像仅配置升级，禁止启动已有数据库卷；备份恢复演练、PostgreSQL 主版本迁移、Redis 数据兼容、Keycloak 登录与隔离库测试另行验证。协作端没有实际执行 Registry 解析、Cargo、Docker 或正式测试。
+
+#### MVP · 依赖升级 Windows 实测与合并范围
+
+维护者 Windows 在 f99b2a483037041346e6269c0728bdeb2b64254a 拉取后使用 Node.js 24.18.0、pnpm 12.23.0、Vite+ 1.8.0 实际完成依赖安装与冻结锁文件复验，依赖目录 13 清单 / 54 Catalog 项通过，Vite+ 469 格式文件 / 311 受检零警告错误，独立 Web 与 Server 类型检查通过，Vitest 5.1.1 单元 79 文件 956/956、HTTP E2E 6 文件 63/63、文档 95 份及 React/Vue 构建通过。日志末尾显示 NestJS 构建的 Prisma Client 生成完成，未独立打印 ready 最终退出码。维护者随后提交 9f1ff67f1230c1d27051fa564d685be4463dd96e，锁文件、供应链精确例外清单与 Vue 格式调整已在 GitHub 核对。React 有一个超过 500 kB 的分包警告，不影响该次构建成功。
+
+Rust Cargo.lock 未更新，仍锁定 tauri 2.12.5 与 tauri-build 2.7.4；恢复原 Cargo.toml 的 2.x 声明，避免合入已知不匹配的冻结锁文件。桌面 Rust 升级另行执行真实 Cargo 解析与构建。维护者明确授权 PR #199 合入 MVP 集成分支，而非 main；该授权不等价于真实 PostgreSQL、Redis、Keycloak、浏览器、桌面或生产环境升级验收。未启动新 Docker 镜像、未迁移或清空数据库。Prisma 8 将在独立候选分支渐进迁移。
+
+#### MVP · Prisma 8 第一阶段验证记录（2026-11-24）
+
+基线为 PR #199 合并提交 9424b167a78f8ab3b4a85683ce03249ed8786d80。已读取 Prisma 官方 PostgreSQL 渐进迁移指南，新增双版本配置与独立契约生成入口。协作容器 Node.js 22.16.0 运行新兼容 CLI 解析测试 `node --test prisma7-cli.cases.mjs`，4/4 通过、退出码 0；实际测试为临时模拟安装包目录中的清单及入口解析，不执行 Prisma CLI、不连接数据库。源码 Git Blob c5428de111a2463fc242120ff8d705a7fe997cec、测试 Blob 7beb2e40b76c883871cebf3ef1a209a63b7810a2 与远端一致。
+
+正式验收顺序：在 Node.js 24.18.0 与 pnpm 12.23.0 环境通过真实 Registry 安装并生成锁文件，冻结安装，核对 prisma 和 prisma7 CLI 主版本；执行 db:validate、db:generate、db:prisma8:emit、test:docker:db、空库迁移脚本的离线保护用例与完整 ready。需要提交真实生成的 pnpm-lock.yaml 和 Prisma 8 契约文件，检查生成物不包含连接凭据。尚未实际执行新版 CLI、生成契约、数据库迁移、正式 Vite+ 及项目回归，不标记通过。真实 PostgreSQL 测试须明确绑定隔离库，禁止操作现有业务库；迁移所有权仍属 Prisma 7。
+
+#### MVP · Prisma 8 阶段二验证（候选）
+
+PR #200 获明确授权后合并至 MVP 集成分支 e75a763821d6215c6b66a1e01a43051d7c7275b3。前一批 Windows 实际结果仅适用于合并前工具链与业务基线，不自动覆盖本批。协作容器 Node.js 22.16.0 对新 URL 校验源码进行独立断言验证，源码 Blob 42ecba9ee018495c466457e739e1717f351c7b34 与远端一致；接受 4 种合法地址、拒绝 17 种异常地址，21/21 断言通过，退出码 0。该运行未使用正式 Vite+/Vitest、未安装 Prisma 8 依赖、未连接数据库。Windows 待执行冻结安装、两版生成、Core 构建、定向 URL 单测、独立类型检查与完整 ready 并打印最终退出码。真实 PostgreSQL 独立专项需显式提供已存在且已迁移的本机隔离库，遵守 HARNESS；本阶段不运行任何迁移。EMPTY 仅证明不存在工程查询，不证明已有样本及单项错配过滤。
+
+### 2026-11-24 · Prisma 8 只读运行时及历史查询候选
+
+PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9330c8a3e`，冻结安装、Prisma 7/8 生成、独立类型检查、974/974 单测、63/63 HTTP E2E、全部构建与 `ready` 退出码 0；真实隔离库专项未提供执行记录。Skills `synced none` 提示仍存在；React 主分包 591.62 kB 提示非构建失败。
+
+下一批新增历史查询候选的五项单测及两项真实数据库专项定义，尚未执行正式 Vitest、Vite+ 或数据库验收。协作环境仅对从远端取得且 Git blob SHA 核对一致的历史读取器、历史对照探针、客户端工厂和数据库专项文件执行 TypeScript 5.8.3 语法解析，四文件零语法诊断；不等价于 TypeScript 6 类型检查或实际运行。真实对照仅针对选中样本所在的 1 ms 时间窗口；空库只验证缺失作用域，不证明已有数据读取一致性。需在本机已准备好的 `adui_scada_test` 隔离库验证，不为制造样本而写入或迁移数据库。
+
+### 2026-11-25 · PR #202 Skills 目录及客户端类型修复候选
+
+维护者 Windows 日志确认 HEAD `81ac5185e6d8f990a65b0a5d0a2b365ed93ff688` 的冻结安装、三项 Skills 同步至服务端四目录、Prisma 7 校验/生成、Prisma 8 契约生成和 Core 构建完成。随后的 Vite+ 报 317 个错误、68 个警告（498 个受检文件），命令链退出码 1；979 项预期单测、63 项 E2E、完整 ready 与真实 PostgreSQL 专项均未获得本批执行结果。
+
+修复候选统一根目录 Skills 同步与列表及契约生成，保留版本检查、现有质量规则和原契约输出路径；共享配置检查拒绝旧的重复副本。另使用固定 ORM PostgreSQL 8.0.0-rc.25 官方公开客户端类型消除 TS2883 候选根因。协作容器 Node.js 22.16.0 执行模拟 CLI 三项测试（3/3，退出码 0），覆盖三个命令的根 cwd、固定配置、子进程退出码、禁止数据库写入与不可信入口；两个脚本的 Git Blob 分别为 e026a2cbedd397eb8c59a415b258d36cc2832cd2 和 eed6146573cd73aeb0360b6c3a7c9c98b345fec6。未执行真实 Prisma CLI、Vite+、正式类型检查或真实数据库。需先迁出本地重复副本（若仍存在），再运行根脚本、核对 Skills 列表和契约哈希、执行完整 ready 及已授权隔离库只读专项。
+
+### 2026-11-25 · PR #202 Prisma 8 CLI 参数顺序复验
+
+维护者 Windows 在 HEAD `5be430a6dec9d071fc1827ee8b47a4f7f6671977` 实际通过 pnpm 冻结安装和原入口测试 3/3；真实 Skills 同步报 `CLI.UNKNOWN_COMMAND`（`--config`），退出码 2。后续列表、配置检查、完整 ready 及数据库专项未执行。E-134/E-135 尚未关闭。
+
+本次按固定 CLI 上游测试修正参数顺序为命令在前、配置选项在后。协作环境 Node.js 22.16.0 加强模拟后复现原入口测试 2/3（退出码 1），修复后 3/3（退出码 0），两脚本语法检查通过；远端候选文件 Blob 与局部实测一致。npm Registry DNS EAI_AGAIN，真实 CLI 未能在协作环境运行。Windows 应先运行 `pnpm run db:prisma8:skills:list` 验证配置解析及根目录，再运行同步、列表、配置检查和原有完整验收。
+
+### 2026-11-25 · Prisma 8 根目录 Skills 真实同步通过及本地残留
+
+维护者 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 的 Node.js 24.18.0 环境实际通过 CLI 入口测试 3/3、真实 Skills 列表、同步和再次列表。项目目录为仓库根，check enabled；prisma-8（8.0.0-rc.25）和 prisma-platform-core-concepts（8.0.0-rc.35）均指向 .agents/skills 且 synced。原 CLI.UNKNOWN_COMMAND 阻塞解除。同步自动移除孤立 Composer Skill；Git 显示其单一跟踪文件被删除。config:check 正确拒绝 apps/server/.agents/skills/prisma-8 本机残留，整条命令链退出 1。
+
+远端完整 Git 树核对：四个服务端 Agent 目录均没有跟踪文件；Composer Skill 不在 skills-lock.json 中，当前实际同步列表未包含该技能。候选分支仅删除根目录这一孤立跟踪文件并更新文档，保留全部脚本、依赖和质量保护。需维护者备份迁出本机旧副本，再验证列表、重复同步、配置检查、契约生成及完整 ready；未执行数据库迁移或真实只读专项。
+
+### 2026-11-25 · PR #202 根目录治理及类型检查通过，文案门禁修复
+
+维护者 Windows HEAD `e281d595efec99724798b837a1dc646435e8bdff` 实际备份迁出 12 个旧 Prisma 技能目录；CLI 3/3、真实根目录同步和列表、config:check 退出码 0，Git 当时干净。两项包内技能均 synced，check enabled。Prisma 7 校验及 Client 7.10.1 生成、Prisma 8 Contract 生成和 Core Node 构建通过；Contract 输出仍在 apps/server/src/generated/prisma8，storageHash 为 054113c40b1e6f3b7609641e09868e45c0e969d8035e6e1376d10ac3e5148424，未见 Skills 过期提示。vp check --fix 与 vp check 均通过，482 个格式文件、324 个受检文件零警告、Lint 或类型错误。原 TS2883 不再出现。
+
+ready 在依赖目录检查（13 清单、57 Catalog）、共享配置检查（10 TSConfig）、环境与 LF 检查通过后，因模拟 CLI JSON 日志触发 messages:check 退出码 1。正式 979 项预期单测、63 项 HTTP E2E、独立类型检查、文档检查、最终构建及真实数据库专项未执行。维护者后续提交 ff92a98167ce01507d43ec45ca80e876d8a4887c，纳入 132 个根 Skills 文件及已格式化的四份自有源码，保留该提交。
+
+本次仅修改模拟 CLI 的 JSON 输出方式及文档。协作端 Node.js 22.16.0 以真实检查器和两个远端一致的入口脚本构造最小目录，复现文案检查退出 1，修改后局部检查 8 文件、入口测试 3/3、语法检查均通过（退出码 0）；不是完整仓库检查。修复后脚本 Blob 为 10aed9bfe70cf8905d82cb23c98daf55d9704bcb。仍须 Windows 全仓 messages:check、两版生成、独立类型检查、完整 ready 及隔离库只读专项复验。
+
+### 2026-11-25 · PR #202 完整 ready 与真实隔离库迁移/只读验收
+
+维护者 Windows HEAD `06a38de6680308a1ed49644450b43e5256f69922` 全仓中文文案 351 文件、CLI 独立测试 3/3、共享配置 10 TSConfig、依赖 13 清单及 57 Catalog、统一环境与 LF、Prisma 7 Schema/Client 7.10.1、Prisma 8 Contract、Core 构建均通过；vp check 为 482 个格式文件、324 个受检文件零警告及错误；React/Vue/服务端独立类型检查、81 文件 979/979 单测（历史候选 5/5、URL 安全 18/18）、6 文件 63/63 HTTP E2E、95 份 Markdown 和 React/Vue/NestJS 构建通过，完整 ready 退出码 0，工作区干净。React 主分包 591.62 kB 超过 500 kB 警告是独立非阻塞优化项，不扩大本批范围。E-134 至 E-138 已完成相应 Windows 工程质量复验。
+
+真实只读专项首次因 URL 门禁拒绝未进入数据库，改为屏蔽输入原始密码、URL 编码并构造隔离地址后，已有工程查询真实 MATCHED；历史阶段仍失败。只读预检确认本机 15432/adui_scada_test、readonly on、迁移表存在，但历史两表及索引不存在，20261124100000_tag_history_archive 未应用。维护者显式确认 DEPLOY adui_scada_test，Prisma 7 migrate status 仅有第八项待应用，deploy 成功，复查 8 项迁移且 schema up to date。随后 Prisma 8 真实只读专项 1 文件 2/2，退出码 0；已有工程 MATCHED，历史为 EMPTY，仅证明缺失作用域查询，不是非空数据验收。未执行 Prisma 8 签名或数据库接管。
+
+### 2026-11-25 · Prisma 7 / 8 / PostgreSQL 历史非空对照候选
+
+维护者明确授权在同一隔离库使用随机专用工程和合成历史数据、结束后清理且暂不合并。新增独立测试覆盖五批十点、四种质量、负零、数值、文本、布尔和 null；十一组严格查询对照（主窗口、首/次毫秒、左右边界、两个真实隔离工程、不同 Tag 及三个缺失作用域），另核对 maxPoints 恰好五条、原生超量哨兵、两版超量与 1001 上限拒绝。原只读专项、业务仓储、Schema、依赖及锁文件不变。写入客户端只接受显式隔离连接、实际数据库与 Schema 预检；只读池独立。夹具清理严格限定三个联合主键，外键顺序及事务内零残留；创建/清理结果未知时不得自动扩大清理或重试，失败诊断脱敏。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3 对新增测试语法解析及转换零诊断，LF 通过；与仓库原检查器 Blob 00127f6ba4d622de026246be6fc0eca011099d5d 一致的局部中文文案检查 7 文件通过。独立内存模拟执行候选测试的正常路径、错误数据库、非法 URL、创建结果不明、写入失败、排序错误、隔离错误及清理失败八条路径均通过；模拟不是 Prisma 或 PostgreSQL 实测。候选测试 Blob 为 f1e180cacb5467b3f65da48efac684f49b1d38f1。当前容器无固定依赖、pnpm、PostgreSQL 实例且 npm Registry 无法解析，未执行正式 Vite+、TypeScript 6、Vitest、完整 ready 或真实新专项；必须由 Windows 复验后方可认定非空 MATCHED。
+
+### 2026-11-25 · PR #202 非空历史对照真实验收及合并
+
+维护者 Windows 在 b12727f7f457afa473f320139c4f683dae09ef44 拉取后执行两版生成、Core Node 构建、vp check --fix/vp check（483 格式文件、325 受检零警告错误）、352 自有文案文件、服务端独立类型、95 Markdown，退出码 0。真实只读专项 2/2（工程 MATCHED，历史 EMPTY）；独立非空三方对照 1/1，测试执行 665 ms，整个专项 1.92 秒，专用夹具清理通过，退出码 0。完整 ready：81 文件 979/979 单测、6 文件 63/63 HTTP E2E、CLI 3/3、双框架/服务端类型和构建通过，退出码 0。React 591.62 kB 主分包警告仍为非阻塞优化项。维护者提交 b87eb651bb2a1665c3628bb504bfc838640efa14 的格式差异已逐行核对，仅 7 行新增、9 行删除，最后本地执行 SHA 未单独打印，不能绑定该远端 SHA 为直接实测证据。维护者明确授权后 PR #202 Squash 合并至 feat/mvp-first-integration@f649105aafb635a8519f1fb6eed47809e756435c，主 MVP PR #198 继续 Draft。
+
+### 2026-11-25 · Prisma 8 历史写入事务候选
+
+新增独立候选仓储、五项 Vitest 单测源文件和真实隔离库写入专项一项；正式 Prisma 7 仓储、只读探针及三方对照、依赖与锁文件、Schema 和迁移保持不变。写入使用 Prisma 8 固定版本 rc.25 官方公开事务类型，已核对该版本的 raw.sql/affectedCount、SQL builder insert、事务 ReadCommitted/timeout、原生 SQLSTATE 归一化及默认标记警告源码与测试。真实专项覆盖首次与重复提交、两版互相重放、跨版本同内容竞争、新版不同内容竞争、负零与内容/顺序冲突、只读拒绝、复合外键、真实唯一约束回滚、回滚后同键正常提交、真实租户/工程隔离、清理与释放；尚未运行。
+
+协作容器 Node.js 22.16.0 / TypeScript 5.8.3 对三个新增 TS 文件语法解析和转换零诊断、LF 通过；复用原中文文案检查器（Blob 00127f6ba4d622de026246be6fc0eca011099d5d）局部检查 9 文件通过。使用模拟 Core 编码器及测试接口执行五项候选校验源用例 5/5；用模拟 Prisma 事务接口执行首次/重放、错误库、只读、异常计数、部分写入、明细异常、缺失批次、缺失记录、未知提交结果及无效输入的 11 条控制路径 11/11。以上为局部和模拟验证，未运行正式 Vitest、TypeScript 6、Vite+、完整 ready 或 PostgreSQL。npm Registry DNS EAI_AGAIN，容器无固定依赖、pnpm 或 PostgreSQL。新增文件远端 Blob 须与局部验证版本一致；Windows 需先生成两版客户端、构建 Core 并通过格式/类型/文案/文档，正式定向五项单测、真实写入专项及原只读/历史三方对照、完整 ready，才能进入合并验收。
+
+### 2026-11-25 · Prisma 8 工程版本持久化候选验收
+
+PR #203 的维护者 Windows 实际验收记录：984/984 单测、63/63 HTTP E2E、四项真实数据库专项、完整 ready 退出码 0，最终工作区干净；最终测试对应 SHA 未单独打印。已按授权合并为 2b0030232a32745f944373cdeb68cc559e208ffd。
+
+新批次新增五项请求边界单测定义及一项真实 PostgreSQL 综合专项定义，覆盖双版本创建/追加、三项 ACL、初始未发布状态、CAS、SHA-256、成功审计、唯一约束故障回滚、跨租户与只读拒绝、精确清理。已通过 GitHub 接口回读源码并核对写入一致；协作容器 Node.js 22.16.0、TypeScript 5.8.3，无 pnpm，GitHub 域名解析失败，未执行固定版本 TypeScript 6、Vite+、Vitest、ready 或 PostgreSQL。必须由维护者 Windows 实测后才能认定新候选通过；不得自动重试或执行迁移、签名。
+
+### 2026-11-25 · Prisma 8 工程版本写入结案及查询候选验证范围
+
+PR #204 维护者 Windows 实测最终 HEAD `07983561cf1bc87a84e9ba3f5519423ee01750c0`：989/989 单测（83 文件）、63/63 HTTP E2E、5/5 真实 Prisma 8 数据库测试、489 个格式化文件、331 个受检文件零错误警告、358 个中文文案检查文件、95 份 Markdown、完整 ready 退出码 0，最终工作区干净。按明确授权 Squash 合并至 `e7718de45e77f40bb46acfe44989d5924c4f75b9`。
+
+本批定义六项工程查询单测、一项真实 PostgreSQL 综合专项。综合专项使用两个随机租户、三个随机身份及四个复合工程键，生成十二个连续修订并验证两位数数值排序、稳定游标、五项双版本查询、权限隔离、摘要篡改拒绝、旧 head 预检拒绝、撤权与零残留；正常查询前后对照专用记录。查询候选不执行 DML，夹具准备、故障注入及清理由专用测试执行。
+
+已通过 GitHub 接口写入与回读，检查根脚本 JSON 可解析，并修正文本化修订号排序风险。协作容器实查 Node.js 22.16.0、TypeScript 5.8.3，pnpm 不在 PATH，GitHub 域名解析无结果；无法直接拉取并执行项目固定工具链。本批没有实际运行 TypeScript 6、Vite+、Vitest、ready 或 PostgreSQL。Windows 必须实际执行新增六项单测、五个数据库专项入口和完整 ready；预期 995 项单测、63 项 HTTP E2E、6 项 Prisma 8 数据库测试，不得作为已通过记录。
+
+### 2026-11-25 · Prisma 8 查询结案及发布候选验证范围
+
+维护者在 PR #205 最终 HEAD `37f5d89761bf51c8fa5b48e153e0f3e7b91f6ebe` 实测 492 格式文件、334 受检文件零警告错误、361 中文文案、95 Markdown、6/6 定向查询、995/995 全量单测、63/63 HTTP E2E、6/6 Prisma 8 真实数据库用例、完整 ready 退出码 0，工作区干净；按授权合并至 `d7d768100771a615708de11602a8a1ba40b851fe`。React 仍有既有大于 500 kB 分块提示，不影响此次构建成功，不属于本后端迁移修复范围。
+
+新批定义五项发布请求及默认门禁单测和一项真实数据库综合专项；覆盖未发布与已发布指针对照、默认门禁零写入、隔离测试门禁下双版本幂等、跨版本并发 CAS、编辑与发布水位分离、真实指针 CAS 失败后的事务回滚、撤权与会话失效以及夹具零残留。未运行项目固定工具链或真实数据库；实际通过须以 Windows 日志为准。此处事务回滚表示 PostgreSQL 原子性，不是历史发布回滚执行能力。
+
+按维护者本轮明确要求，常规批次不重复执行完整 ready；本批需 Vite+、服务端类型检查、中文文案与文档检查、关联发布/安全门禁定向单测及新增真实发布数据库专项。阶段集成与 MVP 验收继续保留完整 ready；涉及共享契约、依赖、Schema 或跨模块变化时增加对应回归。
+
+### 2026-11-25 · Prisma 8 发布候选结案与身份会话专项
+
+维护者 Windows 在 PR #206 最终 HEAD `ecdb4abec813b2f93fec48970214f5d9c97edaf1` 实测 38/38 定向单测（新版发布 5、旧版发布 19、安全门禁 14）、1/1 真实 PostgreSQL 发布专项（1229 ms）、495 格式文件、337 受检文件零错误警告、服务端类型检查、364 中文文案、95 Markdown，工作区干净。按明确授权 Squash 合并至 `be332e87977b60ee6fae13de33d8d0c9f0fd0f39`。按增量验收约定未重复执行完整 ready。
+
+本批定义四项输入单测及一项真实 PostgreSQL 综合专项：两个随机租户、同名主体、随机 Issuer 下精确外部身份绑定，双版本会话互认、摘要与时效、旧 Bearer 不升级、跨会话 CSRF 拒绝、跨租户及并发撤销、过期、未来签发、主体停用、专用夹具精确清理。固定阶段脱敏失败，不自动重试。GitHub 源码写入回读一致性和脚本 JSON 检查属于静态协作检查；本批未实际执行 Vite+、项目 TypeScript、Vitest 或 PostgreSQL，待维护者执行增量验收后方能认定通过。OIDC 登录事务、生产认证 Provider 和真实 IdP 端到端不在本批范围。
+
+### 2026-11-25 · Prisma 8 身份会话结案与 OIDC 登录事务验证范围
+
+维护者 Windows PR #207 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79f4` 实测 498 格式文件、340 受检文件零错误警告、服务端类型检查、367 中文文案、95 Markdown、39/39 定向单测（候选 4、身份 13、Guard 10、回调 12）、真实 PostgreSQL 专项 1/1（738 ms），工作区干净。按明确授权 Squash 合入 `46d3142ae6afa156baf4de0771127ad553a51b6f`。本批未重复完整 ready。
+
+新批定义五项输入及脱敏测试、一项真实 PostgreSQL 综合专项；真实专项先核对现有 OIDC 迁移登记与表、索引，使用两个随机专用 Issuer 和合成 Discovery 元数据。验证 Prisma 7/8 互相创建及消费、独立 PKCE challenge 复核、摘要与五分钟时效、跨浏览器及 Issuer 拒绝、跨版本并发恰好一次成功、过期与未来创建、跨 State 密文/Nonce/路径篡改的拒绝及不可恢复消费、138 条本 Issuer 过期记录按 128+10 回收、其他 Issuer 及未过期记录保护、已确认主键精确清理。测试不启动后台清理定时器，不连接真实 IdP，不读取任何真实凭据。
+
+协作端已通过 GitHub 源码写入回读与根脚本 JSON 检查；本地 Node 22.16.0 环境无 pnpm 且 GitHub 域名解析失败，未执行仓库固定 TypeScript/Vite+/Vitest 或 PostgreSQL。新候选的增量质量、相关单测及真实数据库专项仍待维护者 Windows 执行，不以旧 PR 成功代替本批实测。
+
+### 2026-11-25 · Prisma 8 OIDC 登录事务结案与工程 ACL 专项
+
+PR #208 维护者 Windows 实测 501 格式文件、343 受检文件零错误警告、服务端类型检查、370 中文文案、95 Markdown、30/30 单测（候选 5、现有登录事务 13、回调 12）、真实 PostgreSQL OIDC 专项 1/1（1178 ms），日志末尾 HEAD 为 `30a58668771a8c687ba2fad9435e093efecec34e` 且 Git 工作区无输出；远端最终 HEAD `f032c8ec0eb7778e420f666562b020b594baede5` 多一次三文件排版提交，已核对未发现业务逻辑变化。按明确授权 Squash 合入 `920c95d1669bc4a0e8e9f5cb8617caae60d67318`。本批不重复完整 ready。
+
+新批定义七项 ACL Guard 单测和一项真实 PostgreSQL 综合专项。测试核对实际隔离库及 release:read 迁移登记、授权索引、工程/身份/会话/发布结构，构造两个随机租户、四个身份和三个工程；比较两版 Guard 六项独立权限、同名工程、同名主体、跨租户/跨工程拒绝、缺失权限及未知动作、固定审计码，正常查询前后对照全部专用工程记录。在专用工程排他行锁内仅撤销指定版本追加和发布读取权限，验证两版 Guard 再次拒绝、两版仓储拒绝已通过 Guard 的过时请求、编辑及发布状态和其他权限不变，最后按确认创建的复合键精确清理。测试不执行发布、回滚、真实 IdP 或设备操作。
+
+协作容器实查 Node.js 22.16.0、TypeScript 5.8.3，pnpm、vp 不在 PATH，GitHub 域名解析无结果；通过 GitHub 接口写入回读、LF、根脚本 JSON 和差异范围核对，不等于运行项目类型检查、Vite+、Vitest 或真实 PostgreSQL。新候选须经维护者 Windows 增量验收，未替换正式 Prisma 7 Guard 或迁移管理。
+
+### 2026-11-25 · Prisma 8 ACL 结案与迁移接管预检
+
+维护者 Windows PR #209 日志 HEAD `1289802eca1d442cc13b8a63cd88dcb90cd922c7`：504 格式文件、346 受检文件零错误警告、服务端类型检查、373 中文文案、95 Markdown、43/43 定向单测（候选 7、身份 13、会话 Guard 10、纯权限策略 13）、真实数据库 ACL 专项 1/1（1013 ms），工作区无输出。远端后续三文件排版 HEAD `7b9d0e0cbedf392259d18ffddefefa39248abf57` 已复核，明确授权后 Squash 合入 `8bc5458deb13541c90f7b8b2e298ca2b94a296c5`。未重复完整 ready。
+
+本批静态读取固定八项历史 SQL 和生成 Contract，确认十二业务表、八十五列、十二主键、十三外键、三十六 CHECK、二十非主键索引，存在末次发布事件复合外键和 CHECK 表达差异。定义九项离线测试和人工只读隔离库预检；验证历史校验和、实际只读边界/标记、字段、已验证约束、主外键完整形状、六项 ACL 实际定义、索引和中文注释。目录指纹含实际定义与注释，其他 CHECK 及默认表达式完整语义、索引细节待独立参考库比对。预检通过仍为 REVIEW_REQUIRED，禁止签名。
+
+协作端实查 Node 22.16.0、TypeScript 5.8.3，缺少 pnpm/vp，GitHub 域名解析失败。GitHub 文件回读、JSON、仓库静态盘点不等同于 Windows Node 离线测试、Vite+ 或 PostgreSQL 实测；本批待执行增量质量、CLI 限制回归、九项离线测试及真实只读预检。
+
+### 2026-11-25 · PR #210 迁移预检参数化测试告警修复
+
+维护者 Windows 日志显示 507 个格式文件、348 个受检文件零错误及一条 typescript(no-misused-spread) 警告，375 个中文文案文件和 96 份 Markdown 通过；未提供九项离线测试、真实 PostgreSQL 预检和本地 HEAD 的完整记录。E-140 仅将五组异常参数改为具名对象，原有九项测试定义及全部断言不变；修复提交 `5cee243361a1ebfac7560b019b5e59a05db0fe0e` 回读一致。Node.js 22.16.0 独立参数等价性 5/5 及独立示例语法检查通过，TypeScript 5.8.3 声明生成确认类型分离；不等于运行仓库实际九项测试或 Vite+。待维护者 Windows 执行 CLI 3/3、预检 9/9、Vite+ 零警告错误、中文文案、文档与真实只读预检并记录目录指纹。PR 保持 Draft，接管状态仍需审查，禁止签名。
+
+### 2026-11-25 · PR #210 结案及独立参考库目录对照候选
+
+维护者 Windows HEAD `06990a536c931884f4d593e51a336cb7f9843329`：CLI 3/3、离线预检 9/9、507 个格式文件、348 个受检文件零警告错误、中文文案 375 文件、96 份 Markdown、增量退出码 0。实际只读预检退出码 0：八迁移、十二业务表、八十五列、三十六 CHECK、十三外键、二十非主键索引；UTC、Prisma 8 标记不存在，契约存储哈希 `054113c40b1e6f3b7609641e09868e45c0e969d8035e6e1376d10ac3e5148424`，目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，REVIEW_REQUIRED，签名许可否。日志末尾两份脚本有格式化变更；最终远端 `adc3d55f1b4adb59d55a15213c9315641a4e1bc9` 差异核对为排版，按授权 Squash 合入 `24391af99df003f19dbcec5a46d891874df03be7`。E-140 关闭，未运行完整 ready。
+
+新批在原九项定义上增加六项离线测试：互相隔离的 URL 白名单、逐项一致、默认表达式/CHECK/注释/索引定义偏差、实际参考库名及标记/登记、查询上下文差异、失败即停止。真实对照使用独立已重放历史的本机 `adui_scada_fresh_prisma8_ref` 与原验收库；两个快照各自通过同一基线预检后逐项比较现有受检目录行并检查指纹。双方必须具有相同 PostgreSQL 完整版本号、编码、collation/ctype、UTC、DateStyle、search_path 及 standard_conforming_strings。禁止在对照期间并发 DDL；目录查询覆盖范围不包含所有 PostgreSQL 对象、主键索引底层属性、所有权限/RLS/触发器及部署行为，不以匹配结果授予签名。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3：与远端 Blob 一致的目标保护文件通过独立严格 tsc，新增 CLI 源码及重建的快照/对照函数摘录通过 Node 语法检查；用模拟查询、历史和目录验证器执行独立九项检查 9/9，CLI 缺少连接和额外参数均退出 1。目标保护及 CLI 本地 Git Blob 分别为 `3a84f36578e21973f9f1c4fe6a60e391e80fd32b`、`de06652b80bb12c6596144c50adb3e492562d852`，与远端一致。此处不等于正式十五项离线测试、固定版本 Vite+、完整 ready 或真实 PostgreSQL 已通过；协作端缺少 pnpm/vp，GitHub 域名无法解析。参考库尚未确认建立或重放，待维护者明确授权和提供独立重放证据。不得自动建库、部署、签名或重置。
+
+### 2026-11-25 · PR #211 结案与独立参考库历史重放候选
+
+维护者 Windows 初始 HEAD `32afc5e33bc6832179ee7708b5288469a8c6786d`：Prisma 8 Contract emit 成功，CLI 3/3、迁移预检与对照离线 15/15、Vite+ 508 个格式文件与 349 个受检文件零警告错误、服务端独立类型检查、376 个中文文案文件、96 份 Markdown，增量退出码 0。原隔离验收库真实只读预检回归退出码 0，标记不存在、UTC、目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，与 PR #210 一致。最终 HEAD `a50077a417959520ab6dd5790116b17f1cbc75a9`，工作区干净；远端两份脚本格式化差异已按归一化空白、尾逗号及字符串常量、SQL 模板核对。维护者明确授权后 Squash 合入 `ce8c1fefe1a3a8bcd56fb42f30274cdd6109d97d`。真实独立参考库对照尚未执行；本次合并不代表迁移管理接管通过，未重复完整 ready。
+
+新批定义独立参考库重放门禁：仅已由维护者手工建立的本机 127.0.0.1:15432/adui_scada_fresh_prisma8_ref，显式确认参数、独立 Prisma 7 配置、锁定 7.10.1、已验收指纹和契约、实际只读空库/其他会话检查、固定 deploy/status 子进程。两次部署均需双库目录与已验收指纹一致，并比较八项迁移登记的 ID、名称、校验和、开始/完成/回滚时间及步数；失败即停止，无自动重试、恢复、清理或签名。空库元数据检查不是所有 PostgreSQL 对象的完整枚举，也不是跨 Prisma CLI 的原子排他锁，必须由维护者确认全新建立且无并发 DDL/连接。
+
+协作容器 Node.js 22.16.0 已使用与远端 Git Blob 一致的重放脚本 `8121c6edc1d38fa1db82bc66d84571461dbc498f`、九项测试 `1c44c68bd14033fde4b96686b9e3994ab60d3a6c`、专用配置 `9fa6eaf7cde1d10ec829a98c61f50e92f8a5cca7`，及实际原 URL 门禁和 Prisma 7 CLI 解析器。Node 语法检查通过，新增九项测试 9/9；该局部重建目录中的未调用原预检集成导出使用拒绝执行替身（异常类原样保留），不等同完整仓库回归。专用配置使用 defineConfig 恒等替身完成八个输入保护路径 8/8，缺少 CLI 显式连接退出 1；用原中文文案检查逻辑限定三份新增文件检查通过。未执行真实 Prisma CLI 配置加载、pnpm、Vite+、固定 TypeScript 6、真实 PostgreSQL 或完整 ready，待 Windows 验收。未创建、迁移或重置任何数据库。
+
+### 2026-11-25 · PR #212 结案与原生 Contract 候选评审
+
+维护者 Windows 初始 HEAD `ec5a5b3056fae4e0fbb262b5eebdd615f61a88d3` 实际通过 CLI 3/3、预检/对照 15/15、重放门禁 9/9、Vite+ 511 个格式文件及 352 个受检文件零警告错误、服务端类型检查、379 个中文文案文件、96 份 Markdown，增量退出码 0。真实独立参考库八项迁移首次/二次 deploy/status、双库目录对照及迁移登记稳定性验证通过，双方指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，MATCHED_REVIEW_REQUIRED、签名许可否，专项退出码 0。远端最终 HEAD `25bc208392f296e7bfc343008b8b6e4259f4f3ad` 额外两份脚本的完整 diff 为格式、尾逗号及 await 括号调整；用户日志未提供最后本地 HEAD 与状态。维护者明确授权后 Squash 合入 `e4afdd4040dca4ebcdfb3a1abfcdb6ff2b86a473`。保留参考库，不再次重放。
+
+新批以物理结构优先建立原生 PSL 模板，静态核对十二模型、八十五物理字段、十三外键、十二主键、二十非主键索引，明确恢复历史六字段外键，不增设冗余唯一约束。运行时采集使用已有双库只读事务与已审查目录指纹，提取普通 pg_get_constraintdef 的 CHECK 外包装内精确谓词并以 map 原名插入 36 项；独立离线生成并审查物理 IR、根、领域字段/映射、关系及生成器。故意不在本候选定义事件反向 currentReleaseState 单值导航，正式过渡 Contract 仍保留原关系；是否支持固定版本替代写法和实际运行时类型兼容待验证。输出位于根忽略目录 .artifacts/prisma8-native，拒绝覆盖旧结果，禁止签名、迁移、Provider 切换或改写正式生成物。
+
+协作容器 Node.js 22.16.0：新增评审模块与测试文件的本地 Git Blob 与远端一致，首次 7/8（E-141），修复后语法检查和实际离线测试 8/8；真实 CLI 包装器及 Mock CLI 测试 Blob `5589af7aa288f1939d75f026008bb176f89987ef`、`76c6b7d80c3f0e896ba824f48bf13553314fcea4` 与远端一致，语法检查、四项进程回归 4/4；新增编排脚本 Blob `4f27db066967d26f80bfe94b41fe217502ce4586` 与远端一致，Node 语法检查通过。以上为真实 Node 运行的离线模拟，不是 Prisma 8 原生 PSL 编译、生成类型应用编译、真实双库采集或完整仓库验收。协作容器缺 pnpm/vp 且 GitHub/npm 域名解析不可用；预检新增第十六项与其余原测试、Windows 固定工具链及真实候选生成待维护者运行。未进行数据库写入。
+
+### 2026-11-25 · PR #213 原生候选真实生成验收与排序警告修复
+
+维护者 Windows HEAD `6fbc054ad0627520c44cc7765a696f68723735d7` 实测正式 Contract emit、CLI 4/4、迁移预检及对照 16/16、重放门禁 9/9、原生评审 8/8，合计 37/37；515 个格式文件、356 个受检文件零错误但 E-142 排序告警一条，服务端类型检查通过，383 中文文案文件与 96 Markdown 通过，增量退出码 0。最终日志 HEAD 同上且 status 未输出修改。随后远端 HEAD `2bedb38ab479a9b650f0f1bbccb4afb673fb7f93` 相对实测 HEAD 的五份脚本差异已核对为格式、尾逗号和引号风格调整，未发现语义变化。
+
+真实原生候选生成成功、受检物理 IR 核验通过，CHECK 36/36，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，executionHash `a4d7e4794290fb3681a486309f2b191b6a804c75c010f175cdf453bcfc66df79`、profileHash `3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2` 与正式一致，正式生成物不变，评审退出码 0。结果 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，差异仅报告 ScadaProjectReleaseEvent.currentReleaseState 和 ScadaProjectReleaseState.lastReleaseEvent，签名许可否。Prisma 输出 PN_EXACT_NAME_BODY_COMPARISON 的 36 个已采用 CHECK 提示（预期，仍需后续官方验证），另提示候选 d.ts 无法找到 @prisma/orm-postgres、独立配置的 Skills synced none。该包实际在服务端清单而非根清单，候选位于根忽略目录，类型依赖可见性及独立配置 Skills 作用域需要后续核验；本次不新增根依赖、不关闭 Skills 检查、不迁移产物路径，服务端现有类型检查通过不等于候选 d.ts 应用类型检查通过。
+
+E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回归 `17cf375756e5cc6c05c6a437296d860362e52d38`，局部 Node.js 22.16.0 提取函数四项测试 4/4、语法检查通过，提取片段本地/远端字节数及校验值一致（1624 字节、FNV-1a f02ba9ae）。正式 Windows 新九项测试及 Vite+ 零警告仍待复验。只改变表名排序的显式类型及等价比较器和新增测试，无 PSL、历史 SQL 或数据库变更；保留此前真实候选产物，无须重复重放或重建候选。PR #213 保持 Draft，未获得本次合并授权。
+
+### 2026-11-25 · PR #213 E-142 复验及 E-143 中文注释修复
+
+维护者 Windows HEAD `8252e1fc058b8f517f46efa5d93b7c71a4393633`：原生候选 9/9，Vite+ 515 个格式文件、356 个受检文件零警告/Lint/类型错误，E-142 关闭。中文检查在脚本第 62 行报告一处 JSDoc 缺少中文，增量退出码 1；后续 docs:check 未执行，日志最后工作区干净。E-143 仅补充同一行中文说明，修复提交 `a19457229be7c590850f329f8c0af36f3ef64a9e`，远端 Blob `f187b89caa8e952bbaa08bdd8db7d0b6ef6cc9a0` 回读确认仅一行注释变化。
+
+协作容器 Node.js 22.16.0：原中文检查器 Blob `00127f6ba4d622de026246be6fc0eca011099d5d` 与远端一致，在独立七文件最小夹具实测修复前退出码 1（单处 JSDoc 失败），修复后退出码 0、Node 语法检查通过；按原扫描器单行判定逻辑核对完整远端目标源码，前一处后零处。未执行修复后全仓 Vite+、九项测试、messages:check 或 docs:check，需 Windows 增量复验。仅注释修复，不改变物理 IR 或运行时关系阻塞，不重复真实生成、数据库重放或完整 ready，保持 Draft 和签名禁止。
+
+### 2026-11-25 · PR #213 关闭与原生候选离线运行时兼容评审
+
+维护者 Windows 原生候选 9/9、Vite+ 515/356 零警告错误、messages:check 383 文件、docs:check 96 份、增量退出码 0；E-143 关闭，PR #213 按授权 Squash 合入 `4bada62a85fd099eb7a24857f66e2b411eb6a2bf`，本机 HEAD 已确认。
+
+新批复用已保留的 .artifacts/prisma8-native 真实候选，不运行 emit 或数据库命令。远端静态检查十二个名称含 prisma8 的非测试服务端生产模块未发现两个关系名的直接引用；发布仓储显式读取 lastReleaseEventId 对应事件并验证完整性。新增六项离线测试，协作容器 Node.js 22.16.0 / TypeScript 5.8.3 使用最小独立编译夹具实测 6/6，验证两种关系差异白名单、哈希标识拒绝、虚拟声明和 JSON 实际装载、类型不匹配拒绝、磁盘原件不变及禁止写入。新脚本 Blob `f0c8dcb15b1012513b6fe70a9d72818bb200d46e` 和测试 Blob `2b828b98e8a97c225b9d518df05e9a94c2334a75` 与本地实测一致。CLI 新增原生配置 Skills 只读列表及模拟回归；真实固定版本 Skills 列表、真实候选与正式契约双轮服务端类型检查、全仓 vp check、messages:check、docs:check 尚待维护者 Windows 实测。局部编译器测试不代表实际仓库或固定 RC 类型兼容。仍保持 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，禁止签名、迁移、重放、DDL 和正式 Provider 切换。
+
+### 2026-11-25 · PR #214 关闭与原生候选实际查询评审
+
+维护者 Windows 在 `c3a03056f7375d9dd4d42969720cb8e6ae6de625` 实测 CLI 5/5、物理评审 9/9、运行时评审 6/6；正式与原生候选服务端离线类型检查均通过；Prisma 两项根 Skills 已同步（ORM Postgres 8.0.0-rc.25、CLI 8.0.0-rc.35）。Vite+ 517 个格式文件、358 个受检文件零警告错误，中文文案 385、Markdown 96，增量退出码 0。最终 HEAD `8310c986a1619a47b9b121d6e3db172b8d8f30cb` 仅两份脚本排版变化，按授权 Squash 合入 `63cdc5d9ff5fca03267a3a52d15cdb9189f3447f`。
+
+本批新增发布关系查询只读探针与七项离线回归。协作容器 Node.js 22.16.0 实测 `node --test scripts/prisma8-native-query.cases.mjs` 7/7、`node --check` 新探针及核心脚本通过；三个远端 Git blob 与本地测试文件一致。离线回归覆盖 bigint、六字段逐项漂移、空关联、事件类型、显式读取差异及错误租户/工程拒绝。真实候选及隔离 PostgreSQL 仅位于维护者本机，真实查询、项目 Node 24、Vite+、中文文案和文档检查待验收。没有执行数据库写入、签名、迁移、重放、生成物覆盖或 Provider 切换。
+
+### 2026-11-25 · 原生候选官方 Schema-only 验证入口
+
+固定 Prisma 8 Skill 的 db verify 为独立诊断；--schema-only 跳过当前尚不存在的 Prisma 8 marker，只检查候选 Contract 对应的数据库结构。新增根目录白名单入口 pnpm run db:prisma8:native:schema:verify，仅使用独立原生配置和受限的本机 adui_scada_test，不接受通用 CLI 参数或 --db URL 命令行参数。包装器先复用现有只读目标 URL 守卫，再通过连接参数强制 default_transaction_read_only=on、5 秒 statement timeout、2 秒 lock timeout 和 search_path=public；密码不进入子进程参数。非验证命令删除测试库环境变量，保持离线 emit 与 Skills 列表离线。未使用 --strict，允许数据库保留不属于 Prisma 8 Contract 的 Prisma 7 历史元数据。CLI 模拟回归扩展为 8 项，覆盖命令顺序、目标白名单、只读会话参数、离线命令隔离及写入命令拒绝。当前仅新增入口与模拟测试，真实 Prisma 8 固定 RC 官方 verifier、Windows Vite+、文案和文档检查尚待维护者执行；未运行 verifier、签名、迁移、基线规划或任何数据库写入。
+
+### 2026-11-25 · PR #216 结案与基线静态覆盖审查
+
+维护者 Windows 实测 CLI 8/8、520 个格式文件及 361 个受检文件零警告/Lint/类型错误、中文文案 388 文件、Markdown 96 份、增量退出码 0。官方 verifier 实测读取 .artifacts/prisma8-native/contract.json，schema only (tolerant)，隔离库 URL 脱敏且显示只读会话参数，Database schema satisfies contract，退出码 0。远端最终 HEAD `adec9fa04873263ac35eef06b22974c24c460667` 与先前提交的差异为三份文件格式化，维护者日志未给出本机 HEAD；按授权合入 `647fd455d901d4786b2fb2c7b4d179290804d3f7`。这不等同严格目录等价或实际基线重放。
+
+协作端直接读取合并提交中八份 migration.sql，按当前历史字面量 COMMENT ON 形状静态提取（非通用 SQL 解析器），确认 121 条注释语句覆盖 119 个不同对象：表 12/12、列 87 条对应 85 字段、索引 22 个，均含中文。permission 字段注释出现三次，最后一次来自 release_read_permission 迁移。两个带注释主键索引分别为 scada_tag_history_batches_pkey 和 scada_tag_history_records_pkey。现有目录查询明确排除 indisprimary，因此已有 20 个非主键索引目录及指纹不覆盖这两项；主键列检查不是底层索引检查。未来独立补充只读核验及负向回归定义见 ADR-0072；真实目录补充查询、离线基线生成、迁移包检查、新空库重放、全量 Windows 质量门禁均尚未执行。协作容器 Node 22.16.0，缺 pnpm/vp，GitHub 域名解析失败，无法在本地完整检出并执行 docs:check。本批仅文档审查，不新增运行时或脚本。
+
+### 2026-11-25 · PR #217 合入与主键索引、精确中文注释补充核验
+
+维护者 Windows `pnpm run docs:check && vp check` 实测 96 份 Markdown、520 个格式文件和 361 个受检文件零警告错误；增量退出码 0、git status --short 无输出，日志未单列本机 HEAD。PR #217 已按授权 Squash 合入 `c228eff92d12f9b643128d6020ef0af239efc43f`。
+
+协作容器 Node.js 22.16.0：新独立补充判定核心和七项合成目录测试实际 7/7 通过，入口语法检查通过；核心 Blob `d36ab0e8e00217ae6a2ef973e528af359d2a88f1`、测试 Blob `d8b83185554eda152f715aa79e0c393042dd4dd4`、真实入口 Blob `28576419e50327d4c983f352613c6d0319d70fed` 均与本地验证文件一致。再次从合并提交真实八项 SQL 静态核对得到 121 条注释、119 个最终对象、permission 三次覆盖及两个主键索引准确文案。原预检增加三项测试定义，共十九项；七项补充测试及十九项预检测试纳入 ready，真实双库补充核验保持独立执行。未运行 Windows 全仓 Vite+、messages:check、docs:check、十九项预检回归或真实 PostgreSQL 双库专项；容器无 pnpm/vp 且 GitHub 域名解析失败。无真实补充指纹，不能宣布实际目录补充通过。保留旧指纹、原候选及两库，禁止签名、迁移、重放、DDL、生产接管。
+
+### 2026-11-25 · PR #218 真实双库验收与独立离线基线候选门禁
+
+维护者 Windows 验收前 HEAD `7e9362ef4bf6b62b2b1314946d62d21c4c80ed75`，预检 19/19、补充核验 7/7，Vite+ 523 个格式文件及 364 个受检文件零警告错误，中文文案 391、Markdown 96，增量退出码 0。真实两库补充核验原目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52` 保持，主键索引 12、最终中文注释 119、补充指纹 `b7ce46a8e3a203dce7a63fc94bbf1a11d0244521b6efc697e64b1b1a34fd02ad`，MATCHED_REVIEW_REQUIRED、签名许可否、退出码 0。远端最终 HEAD `48b71dfd6b4ead3df51b5ea28bffbfca6bdc0e85` 相对此验收起点仅六份文件格式化；经明确授权 Squash 合入 `e98168711a1a52c0bba76adc6fe1ffcda3cd8076`。
+
+协作容器 Node.js 22.16.0 对新增独立门禁执行 `node --test scripts/prisma8-native-baseline.cases.mjs` 的本地等内容文件，九项全部通过，退出码 0；核心及真实入口的 `node --check` 通过。测试使用临时隔离目录及模拟 CLI，实际启动 Node 子进程，不安装或执行真实 Prisma CLI，不连接数据库。核心 Blob `2ef2f72852c54f468d662b029845e8875d966dd2`、测试 Blob `2adadabfe8de7895bfc4d2bb0f3616f346370c77`、配置 Blob `e32064442ff4d63969f9c730cf1f7b95ef87297b`、入口 Blob `cabb8bfc75925533988ed8a303520ce20a9746f7` 已核对与本地文件一致。覆盖固定确认、环境变量白名单、拒绝已有目录和链接、版本/入口路径、真实模拟进程输出、保留原件及失败诊断、非新增操作、占位符、额外对象、空起点/目标/路径/快照异常。协作容器无 pnpm/vp，GitHub 域名解析失败，未执行完整仓库 Windows Vite+、中文文案、文档门禁、真实固定 RC 规划及独立配置类型检查；模拟结果不能替代固定 RC 的实际 JSON/路径/操作类形状。未取得实际迁移包、计划预览或迁移哈希，不能声称基线 DDL 或 119 项注释已经生成或验证。历史与两库保留，禁止签名、部署或 Provider 切换。
+
+### 2026-11-25 · PR #219 实际 RC 离线规划与 E-144 修复候选
+
+维护者真实 Windows：原离线 9/9、原生 9/9、运行时 6/6、Vite+ 527 格式/368 受检零警告错误、中文 395、Markdown 96、增量退出码 0，工作区干净。原真实规划包装器退出 1；按源码控制流官方子进程退出 0，原件复核和 plan.json 解析已完成。远端 612c63be1b7b0e149e98e15281aa1ae4cad0cc0a 相对初始 HEAD 711fb449 仅三份文件格式调整。
+
+维护者上传原始 ZIP（SHA-256 55c1cc0c899095cdcdee3be8bd4e197592706e08b593dda302fa382bbd5b2af2）。实际为 kind=result、commandId=migration.plan、envelope.ok=true、exitCode=0、diagnostics=[]，envelope.result.ok=true/noOp=false、from=null、to=既有原生存储哈希；无 pendingPlaceholders 字段，源码无 placeholder 调用。46 项 additive，包含 1 schema、12 建表、20 非主键索引和 13 外键操作；预览文本统计 12 主键及 36 CHECK，六字段末次事件外键存在，未见 COMMENT ON。完整 JSON 深度相等，三项声明哈希一致。原始迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd，原生 JSON 文件 SHA-256 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa，计划文件 SHA-256 048606f3358a11647bc5abdac19bc516a2145a9e44ad33acf9cc9b54836ee360。上述标识仅记录实物，不代表迁移哈希独立重算、全部 DDL 语义或部署验收。
+
+协作容器 Node.js 22.16.0 在原本地源码施加同逻辑修复（远端保留维护者格式）执行核心、入口语法检查及十二项回归，12/12 通过；独立解包原 ZIP，直接运行修正核心 inspectBaselinePackage，返回 BASELINE_ARTIFACT_REVIEW_REQUIRED、46、签名/部署许可否；计划与 ops 摘要及预览与执行语句逐项一致，声明三个哈希匹配，十个文件复验前后 SHA-256 均一致。未运行完整项目入口或真实 Prisma 子进程、Windows pnpm/vp/全仓中文及文档检查；必须在最新 HEAD 复验 12+9+6 项及 db:prisma8:native:baseline:review。未上传生成物到 Git，不执行 SQL、签名、重放、数据库变更或 Provider 切换。119 个注释仍缺失，非空发布样本及完整 DDL/依赖评审仍阻塞。
+
+### 2026-11-25 · PR #219 结案与固定原生基线 DDL/注释文本审查
+
+维护者 Windows 实测 12/12 基线、9/9 原生、6/6 运行时、Vite+ 527 格式/368 受检零警告错误、中文文案 395、文档 96、真实已有候选复验 46 项，目标、原文及迁移标识与原包一致，退出码 0。日志未单独打印本机 HEAD；远端最终 `fbe2fc2e370ab3cca807311fbb134a40022f5e0e` 相对 `21fcc5472fc0a91a283d924186ba8161fb50fbc8` 仅两份文件排版。经维护者授权 PR #219 Squash 合入 `55688fe7e261bdade6f7f72cb80329d31b1d478b`，E-144 关闭。
+
+协作容器 Node.js 22.16.0 新增 DDL/注释文本回归 8/8，核心语法检查通过。新模块 Git Blob 9e7198de6a190431398e0cdc07e1ad2fb1872d03、测试 Blob fd59ce2feb90cdbd01ff83e42d6676cc6143c904 与实际本地执行源码一致；复用本地此前已验证的注释提取模块等逻辑源码。直接读取维护者上传原 ZIP（SHA-256 55c1cc0c899095cdcdee3be8bd4e197592706e08b593dda302fa382bbd5b2af2）解包的独立副本，十文件 SHA-256 全部匹配，46 项 execute SQL 与根据原生 IR 独立构造的全文逐项匹配，统计 12 表、85 列、12 主键、36 CHECK、20 非主键索引、13 外键；仅篡改临时副本 stderr 一文件后拒绝、恢复后十文件再次匹配，原 ZIP SHA-256 不变。原包无 COMMENT ON。
+
+协作端另从当前合并提交实际读取八份历史 SQL，按顺序提取 121 条 COMMENT ON，permission 三次覆盖，最终 119 项（12 表、85 列、22 索引）。使用 UTF-8 SHA-256（已用空串和 abc 标准向量校验的独立实现）计算八份原文及按对象键字典序、public 限定、LF 结尾的 119 条最终注释审查文本；文本 14907 字节，SHA-256 为 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7。用实际原生 IR 的合成注释字典在 Node 核对 119 项对象覆盖；尚未在完整仓库用真实历史 SQL 运行新集成入口，不将独立提取和局部实测冒充完整 Windows 专项。新测试纳入 ready，真实固定包专项不纳入 ready。协作环境无 pnpm/vp 且无法完整检出，Windows 最新 HEAD 的 8/8、12/12、Vite+、中文、文档、DDL/注释集成入口仍待实测。
+
+固定原包字节指纹检查不是官方 migrationHash 算法重算；全文对照不是 PostgreSQL 解析、数据库目录证明、预/后置检查语义或依赖解析证明。未执行迁移源码、自发射、SQL、写库、签名、部署或 Provider 切换。
+
+### 2026-11-26 · PR #220 合入与中文注释独立自发射候选
+
+维护者已提交格式调整 d82078733318d722a1fe5607784966e3c7854fde 并明确授权，PR #220 Squash 合入 66dd3bb6aff59ed158f9373d5e63041bda65d40c。此前 Windows DDL 8/8、基线 12/12、Vite+ 370 个受检文件零警告错误、Markdown 96 份通过，真实原包及 119 项文本审查退出码 0；未将历史验收记录冒充合并 SHA 的重新执行。
+
+协作容器 Node.js 22.16.0 执行新增纯逻辑测试 8/8、核心与测试及自发射包装器 node --check 通过。核心 Blob 7a1ced4c5d6d0515dd20bb7632ea5d02222dbbe5、测试 Blob a4c5290e19b08715cd02d43d3d233e3917a97bae、包装器 Blob 772782980788f43fff02c71e381532e02c8a701f 均与本地测试或语法检查文件一致。另从维护者上次 Windows 注释审查日志提取 119 条真实 COMMENT ON 文本，SHA-256 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7，实际转换得到 85 字段、22 索引、12 表操作。测试覆盖 SQL 字面量、对象限定、拒绝非法输入、脚手架锚点、干跑输出、原 DDL 全字段与注释操作、元数据及重复标识。测试夹具不是官方实际迁移源码或实库结果。固定依赖未安装，协作容器无法直接检出仓库，未运行真实 self-emit、migration check、集成入口、Windows Vite+、全仓文案及文档门禁；真实候选产物与新 migrationHash 均未获得。保留原包及历史，不连接数据库、签名、部署或切换 Provider。
+
+### 2026-11-26 · PR #221 Windows 首次增量验收通过，真实脚手架门禁失败（E-146）
+
+维护者 Windows HEAD 87cade6f47db3bcd13a53f05f183ce108b89289a，8+8+12=28 项测试通过，Vite+ 533 格式/374 受检零警告错误，中文 401 文件、Markdown 96，增量退出码 0。真实入口十文件、46 项 DDL、119 项注释及原有指纹匹配；脚手架固定文本匹配拒绝，退出码 1，未启动 self-emit。远端维护者已提交格式调整 2ed5199726d95b8a8cc21e57a0186930b9f324dc。原包与历史保留。
+
+本次在该格式化版本上修复 E-146，改用已存在的 TypeScript 语法树，只在原导入与数组最后节点插入文本，原操作表达式逐字对照，保持固定文件指纹、原操作、目标及官方自发射门禁。协作容器 Node 22.16.0、TypeScript 5.8.3 对同逻辑本地代码实际执行 10/10 及语法检查；新增排版变体与错误结构回归。未取回原 ZIP migration.ts，具体失败断言未知；未运行固定 RC、仓库 TypeScript 6、Vite+ 全仓及真实集成入口。需 Windows 复验，不得根据合成测试宣称 165 项实际生成。
+
+### 2026-11-26 · PR #221 Windows 真实自发射验收关闭，独立候选部署前离线复验
+
+维护者在 f4f134dd0a7772f57963d9ba8f8e85d01ac1874e 实测注释 10/10、DDL 8/8、基线 12/12，Vite+ 533 格式/374 受检零警告错误、中文 401、Markdown 96，增量退出码 0。真实候选成功完成干跑、自发射、165 项完整比较及官方 migration check，原包十文件、历史迁移和正式契约不变；新迁移标识 e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17，COMMENTS_EMITTED_REVIEW_REQUIRED，退出码 0。远端最终格式提交 47d2d5fe137e1cc58076f0b9243584edf49bb454 核对仅两个脚本排版；维护者授权后 PR #221 Squash 合入 6dd53088aac7b48a7a76f37c594e6d176c65c1b0，E-145/E-146 关闭。
+
+本批增加既有独立候选只读复验：固定真实新迁移标识与已验收配置 SHA-256，严格十四文件和目录清单，拒绝链接、硬链接、越界及额外对象；从原包重新构造源码和 119 项操作、检查原 46 项及整个 manifest，复验已保存干跑与完整性成功封装。实际入口再运行官方 dry-run 和 migration check、逐阶段核对原包和候选字节不变；输出路径、长度、逐文件 SHA-256 与独立证据指纹，原始诊断不输出正文。Node 22.16.0 / TypeScript 5.8.3 协作容器七项合成文件系统与逻辑测试实际 7/7、两份新增模块语法检查通过；核心 Blob b73744f3e3a67a79d7ab188e3f633d47af710f27、测试 Blob 60ca8c3811abf142d125118cf343c18f9639d448 与实测源码一致，复用本地同逻辑的已验收注释模块。配置 Blob 825eba5dba88608ae8cbb1b787d4e03086077eb4 与远端一致。未取得真实新候选十四文件、未在固定 RC 下执行新增只读入口、未运行 Windows Vite+ / 全仓中文及文档检查；新的证据指纹不能预填。此次不连接数据库、未创建第三座隔离空库或编写部署执行入口，签名和部署许可均否。
+
+### 2026-11-26 · PR #222 真实候选复验结案与第三座专用空库只读门禁
+
+维护者 Windows HEAD 9f4ec0e1787c9e1c4af7afa690468395cabcad71 实测候选 7/7、注释 10/10、DDL 8/8、基线 12/12，共 37/37；Vite+ 535 格式/376 受检零警告错误，中文 403 个文件、Markdown 96，增量退出码 0。真实原件十文件及十四文件候选、165 项完整操作、官方再次 dry-run 与 migration check、字节不变检查通过，证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e，CANDIDATE_PREFLIGHT_REVIEW_REQUIRED，退出码 0，工作区干净。远端最终 bda0dd823417af24bf99280c6d747757099b9df8 核对仅三脚本排版变化，维护者授权后 Squash 合入 4212160faabec482963b071bff5b34e1e06d3f50。
+
+本批从维护者真实 JSON 输出逐项录入十四份文件的路径、长度、SHA-256、配置哈希及迁移标识；协作容器 Node.js 22.16.0 独立重算清单的规范 JSON SHA-256 与上述实际指纹一致，新增八项 Node 测试实际 8/8，核心及测试语法检查通过。核心 Blob c21254f7418f916dcb4010734b172a14eba5378a、测试 Blob e7c4baee8facd967df8e3bc6babb0cec23e9c78b、证据清单 Blob 2e3a973c51d98899023338d008947eec5dbc28c9 与本地实测文件一致。测试使用明确标记的合成凭据和模拟 pg 客户端，覆盖证据漂移、连接目标、参数、事务与所有者/必要权限、23 类目录与其他会话检查、连接/查询/回滚/关闭失败。不是实际 SQL 或实库验证。未在协作环境执行真实固定 RC、完整 Windows Vite+、中文文案、文档检查及新预检入口，未创建或连接第三座数据库。第三座名称暂定 adui_scada_fresh_prisma8_native，真实存在性、数据库所有者及目录检查结果待维护者单独确认。部署执行、签名及正式接管仍禁止。
+
+### 2026-11-26 · PR #223 首次 Windows 验收与 E-147/E-148 修复
+
+维护者实际 8+7+10+8+12=45 项测试通过，Vite+ 538 格式/378 受检，0 错误、2 条 eslint(no-control-regex) 警告，中文 405、Markdown 96，增量退出码 0。真实独立候选复验 14 文件、165 操作，固定证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 一致，官方再次干跑和完整性检查退出 0；真实第三座空库入口随后仅显示通用只读查询失败、退出 1，未取得实际失败阶段或 SQLSTATE。远端维护者格式提交为 0fb52919af843e2511f84caf542f27a56a5d1c2c。
+
+本补丁保留固定原包、独立候选、SQL、连接保护及只读边界，仅以 charCodeAt 等价替代两处控制字符正则，增加连接/事务/边界/目录/回滚/关闭固定阶段和已知 SQLSTATE/网络错误码脱敏分类。Node.js 22.16.0 真实完整专项 10/10，两个模块 node --check 通过；本地三份文件 Git Blob 分别 8393fec0fc3dedd504a3b7f5eeef51e2c1382bf1、9c60881b6aad355bba3c3525ce1b837c64071cda、6de926fef297190822192df32cf7aa5e8f9d6fc6，与待提交树完全一致。未运行本机 PostgreSQL、固定 RC 新集成入口或 Windows Vite+ / 中文 / 文档复验，真实故障根因尚未确认。此次无数据库创建、写入、重置、签名或部署。
+
+### 2026-11-26 · PR #223 第二次 Windows 验收与 E-149
+
+维护者 Windows 五组专项 47/47，Vite+ 538 格式/378 受检，0 错误、1 条 typescript(no-useless-default-assignment) 警告，中文 405、Markdown 96，增量退出码 0。E-147 原两条控制字符正则警告已消失；不能据退出码 0 认定零警告。修复仅调整预检测试模拟的可选错误码参数及元组类型，原十项测试、固定十四文件证据及数据库 SQL 不变。协作容器 Node.js 22.16.0 模拟函数独立回归 2/2（覆盖未提供错误码及九组显式错误码）、语法及 TypeScript 5.8.3 局部 JavaScript 类型检查通过，不是完整仓库专项或 Windows Vite+ 复验。
+
+维护者已明确授权创建本机第三座专用空库 adui_scada_fresh_prisma8_native；尚无实际创建或新预检结果。仅允许在确认目标实例、角色、同名数据库不存在后新建独立 UTF8 空库；已存在则不重建、不清理、不修改所有者。创建后仍需用明确专用连接执行既有只读门禁，确认 23 类目录、固定证据及回滚关闭，签名和部署许可均否。E-148 实际失败原因待真实脱敏诊断，PR #223 保持 Draft。
+
+### 2026-11-26 · PR #223 真实预检结案及原生独立迁移候选
+
+维护者在精确 HEAD f1c6b7cbaeb27a232413560c42b8811cba096cdc 实测 47/47、538/378 零警告错误、中文 405、Markdown 96、增量退出 0；真实 PostgreSQL 170011 第三座专用库 23 类空目录检查通过，官方再次干跑及完整性检查、固定十四文件指纹不变，回滚关闭，退出 0，工作区干净。按明确授权 Squash 合入 2f8b692a8284f2eab182b5a44155bebaeff1c696。维护者同意第三座专用库迁移。
+
+新增固定 RC 专用迁移配置及独立包装入口，保留原离线配置和候选字节；仅接受唯一预览或迁移确认参数，复用预检 URL 白名单和固定 CLI 解析，凭据仅在白名单子进程环境传递。先复验原件、官方干跑、空库及唯一在线迁移边，再在应用前重新预检；仅执行 db migrate --to 固定目标 --no-advance-ref，禁止签名、策略覆盖及自动重试。应用后要求官方成功结果、目标标记、官方 db verify、剩余路径为空及原件不变。上游当前实现的机器结果字段用于严格候选门禁；固定 RC.35 真实在线机器响应尚未取得，形状不符立即停止，写入调用后若失败视为状态待查。五项离线测试定义，协作环境无 pnpm/vp、仓库检出及维护者 PostgreSQL，完整测试及真实预览/迁移均待执行。业务库、两座旧库及正式 Provider 不变；不代表实际数据库物理结构、注释和约束负向验证已经完成。
+
+### 2026-11-26 · PR #224 真实在线预览通过，实际原生迁移失败（E-150）
+
+维护者 Windows 六组 52/52，Vite+ 542 格式/382 受检零警告错误、中文 409、Markdown 96，增量退出 0、工作区干净。远端 87b8e4d43144fda3e1118e43856bed395b63c4f1 相对 7b5256870c78d73d8367feb6638af23cbd3b6d24 仅两脚本格式化；日志未单独打印本机 HEAD。实际在线预览唯一固定空起点边及十四文件指纹一致，退出 0；真实写入前再次空库预检通过，官方独立迁移子进程未确认成功，包装退出 1，未进入应用结果/官方 verify/剩余路径校验。无官方原始错误码或实际数据库回滚证据。
+
+本补丁冻结再次迁移入口，新增只读恢复检查、固定进程退出码和白名单诊断，拒绝原始敏感异常输出。恢复报告只读统计业务目录、注释数和 marker/ledger 固定匹配计数；无表及标记时另外执行原 23 类空库检查；不将数字一致视为全结构或语义等价。Node.js 22.16.0 对与远端 Blob 一致的核心 bfd14ffc327b058eec860b74bcfa776bd35d3046 及测试 b9a779585572c8b6213b4ad6366def6098b021fd 实际语法及 6/6 模拟测试通过，复用既有本地源码摘录；新入口、实际 SQL/固定 RC 元数据形状、Windows Vite+ / 中文 / 文档待复验。未再次连接或写入维护者数据库，禁止自动重试、清理、签名和正式接管。PR #224 保持 Draft。
+
+### 2026-11-26 · PR #224 恢复验收结案与一次性诊断候选
+
+维护者 Windows 七组 58/58、Vite+ 544 格式/384 受检零警告错误、中文 411、Markdown 96，增量退出 0、工作区干净。第三座 PostgreSQL 170011 真实恢复检查退出 0，九类业务目录及注释计数均零，无 marker schema、marker、ledger 或旧迁移表，严格空库 23 类通过，固定十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 不变。按明确授权 PR #224 Squash 合入 0ffb6672134c4676da31970d74b9bf7f7462bf89。Docker 实测 postgres:17-alpine 健康；现有四小时错误日志未提供可关联首次官方写入失败的错误码，最后目标库不存在错误早于成功预检，不据此推断实际迁移失败原因。
+
+新候选保持旧确认冻结，新增单独显式一次性确认；依然执行原件、固定 RC/Provider、空库、唯一在线边及再次空库预检，在官方迁移调用前以独占创建方式登记独立尝试记录；记录已存在、路径异常、指纹变化或无法写入即拒绝。记录不含凭据且位于候选目录之外，不自动删除。扩展固定官方直接错误封装识别，保留原命令匹配、白名单及成功条件，不输出摘要、原始异常、连接串或任意元数据。Node.js 22.16.0 新核心 Blob d026bd03d3e8ae4833b3641080bc912413461d99 与测试 Blob 610e0bd261a5e01d029ddd73c034732bd24e9ba2 本地一致，语法检查及独立五项测试 5/5；另对现有诊断函数同逻辑摘录做三项直接/包装/错命令及脱敏断言通过，不等同完整恢复专项。Windows 合并后完整专项、Vite+、中文及文档未运行；实际 RC 诊断与迁移仍待维护者单独确认执行。禁止自动重试、删除记录、重置、签名、改动旧库、正式 Provider 切换。
+
+### 2026-11-26 · PR #225 真实诊断与严格结构只读对照候选
+
+维护者在 HEAD `240d70a3a2fbb3efeb43257ac1bb874d594bd75c` 开始 Windows 验收，恢复 12/12、迁移 5/5、空库预检 10/10（合计 27/27），Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96，增量退出 0，工作区干净。最终 HEAD `ef8782371e3aaa0f56d557d3772ccc88e6db6ac3` 相对验收起点仅一份测试排版；经维护者授权 PR #225 Squash 合入 `9a8bfe5bb630c0c2dbb8b2df1c505f33d0948664`。真实一次性执行两次空库预检、唯一在线路径及固定证据核对通过，独占尝试记录已登记；官方迁移退出 2、诊断 `MIGRATION.SCHEMA_VERIFY_FAILED`，包装退出 1。随后真实第三座库 PostgreSQL 170011 只读恢复退出 0，九类目录及注释计数均零，无 marker schema、marker、ledger 或旧迁移记录，严格空库 23 类通过，十四文件指纹 `02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e` 不变。该证据不证明实际迁移成功或全部回滚过程。
+
+已核对固定 PostgreSQL Provider v8.0.0-rc.25 上游源码 `packages/3-targets/postgres/1-target/src/core/migrations/runner.ts`（https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/1-target/src/core/migrations/runner.ts）：app 空间在执行计划后、提交事务和更新 marker/ledger 之前，以同一 driver introspect 并调用 verifySchema，默认 strictVerification 为 true；失败携带 meta.schemaIssues。既有 #216 是宽容 schema-only 对照，不能代替迁移严格验证。尚未确认固定 CLI rc.35 是否覆盖默认选项，也未保留此次 schemaIssues 具体内容，严格模式只是待验证的差异假设，不得认定历史登记、中文注释或某一约束为根因。
+
+本批冻结原确认和已消耗的单次恢复确认（无论本地记录是否存在），保留一次性记录和原件。只在既有 CLI 白名单新增 `db native-schema-verify-strict`，映射固定 `db verify --schema-only --strict --json`，复用原生配置、原 adui_scada_test URL 守卫与 PostgreSQL default_transaction_read_only、超时和 search_path 参数；不扩大允许库名，不运行任何写入，不改第三座库、候选、历史、正式 Provider 或依赖。严格 JSON 是官方机器输出，仅供维护者在本机提取诊断码、结构路径和差异类别，不分享原始输出、凭据、任意元数据或业务值。严格对照可能返回历史 Prisma 7 登记等未声明对象，不能据此推断第三座库实际失败点，也不应删除对象、放宽验证或签名。
+
+协作容器 Node.js 22.16.0 核对 CLI Blob `16308a36bfddaf90380afc42000c155b853f7aff` 及现有 URL 守卫 Blob `3a84f36578e21973f9f1c4fe6a60e391e80fd32b` 与本地一致，CLI 语法检查通过；独立模拟子进程 5/5（严格参数与根 cwd、只读选项、退出码，宽容行为保持，非法目标/选项、附加参数/写命令拒绝，离线环境隔离）。首次局部测试受 Node 22.16 默认未启用 TS 类型擦除影响为 3/5，使用 NODE_OPTIONS=--experimental-strip-types 后 5/5；不是 Windows Node 24 仓库九项回归，不是固定 RC 实际结构验收。Windows CLI 9 项、恢复 12 项、迁移 5 项、空库 10 项及 Vite+、中文、文档与真实严格对照尚待维护者执行。
+
+### 2026-11-26 · 严格控制库验收及执行检查条件离线评审候选
+
+维护者 Windows 实测 CLI 9/9、恢复 12/12、迁移 5/5、空库 10/10，共 36/36；Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96、增量退出 0、工作区干净。固定 RC 与两份 Contract SHA-256 通过；历史验收库真实宽容及严格 schema-only 均退出 0，严格官方机器结果 True。日志未单独输出本机 HEAD，远端 PR #226 HEAD ac0b7abad8094b0ce38036f1fe5a2a234709cbd7，经明确授权 Squash 合入 5797d5388eac7b531ae13e51e0b336ef770bf460。仅确认控制库结构符合契约，不证明第三座库迁移后的实际目录或失败原因。
+
+固定 Provider rc.25 Runner 源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/1-target/src/core/migrations/runner.ts 的 applyPlan 在 postcheck 和幂等检查均启用时先执行 postcheck；非空且全部满足则跳过该操作，否则继续执行 precheck、execute、postcheck，随后 app 空间整体 schema 验证。已有 DDL 对照只验证 execute 文本，并未分析真实 precheck/postcheck 参数及是否可能提前满足。此为调查方向，不能断言实际发生过跳过，也不能把空检查或相同检查判定为故障。控制库严格验证已通过，不再把宽容/严格差异单独作为根因。CLI rc.35 实际参数、真实失败 schemaIssues 和失败瞬时结构仍缺证据。
+
+新增固定离线执行检查评审入口，仅校验已安装 CLI/Provider 版本及入口路径，不启动 CLI，不创建连接或子进程。复用固定原包十文件、独立候选十四文件、离线配置指纹门禁，读取候选 ops.json 后按已验收清单再次核对长度及 SHA-256；检查 46 项结构与 119 项注释顺序边界、唯一标识、additive/postgres/单 execute、precheck/postcheck 形状；导出结构操作的检查 SQL 和参数及缺失/相同检查标识，注释仅统计覆盖，不导出注释 SQL/参数、执行 SQL、任意元数据或连接凭据。输出前再核对原包和候选。不执行 SQL，不写任何候选或数据库，不授权签名、部署或再次迁移。报告是静态证据，不代表真实执行或 PostgreSQL 结构验证。
+
+协作容器 Node.js 22.16.0 三份新增源码 node --check 通过，四项独立模拟测试 4/4；实际远端源码 Blob 与本地一致。未获得维护者本机固定候选原文，未执行真实离线入口、完整 Windows Vite+、中文和文档检查；不能宣称真实 165 项提取成功。
+
+后续须在 Windows 检查四项定向测试及 Vite+、中文、文档，并使用原候选运行只读入口；仍禁止重复迁移、签名或切换正式 Provider。
+
+### 2026-11-26 · PR #227 验收及固定迁移快照直接结构评审候选
+
+维护者 Windows 实测 PR #227：执行检查 4/4、DDL 8/8、候选完整性 7/7，共 19/19；Vite+ 549 格式/389 受检零警告错误，中文 416，Markdown 96，增量退出 0，工作区干净。真实固定离线报告退出 0，十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 不变，46 项结构、119 项注释，缺前置 1、缺后置 1、相同前后 0，状态 EXECUTION_CHECK_REVIEW_REQUIRED。日志未打印具体操作标识或报告全文，不能断言两项为同一操作或判定实际发生错误跳过。日志未单独打印 HEAD；远端唯一 HEAD 8328529cd078bfb6ff37df206c426ca864c0dcd5，经明确授权 Squash 合入 46d9e0e757d1ad46c3b88f302f012612da4356f0。
+
+新增上游证据：v8.0.0-rc.25 标签的 CLI 共享源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/operations/run-migration.ts 在 perSpaceOptions 显式传入 strictVerification: false，不能继续将 Runner 默认 true 当作实际迁移参数；此标签 CLI 源码不等同维护者已安装的 CLI rc.35，后者实际选项仍未核实。相同标签的 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/operations/db-verify.ts 使用 collectAggregateNamespaces(aggregate) introspect，再按空间 verify；而 Runner 使用 destinationContract 直接 introspect/verifySchema。Provider 公开控制入口 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/9-facade/src/exports/control.ts 与 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/client.ts 的 schemaVerify 使用完整反序列化契约直接 introspect/verifySchema。该差异值得对照，但不证明第三座库失败由聚合或非严格模式导致。
+
+新增固定直接只读入口，锁定 CLI rc.35/Provider rc.25 及原包、十四文件，核对唯一迁移目标快照与候选根契约的文件哈希和 JSON 深度相等。仅复用 adui_scada_test URL 守卫并进一步限定 127.0.0.1:15432、非空凭据及固定只读启动参数，不接受额外命令行参数；以公开 createPostgresControlClient、connect、schemaVerify、close 顺序执行宽容及严格两种直接验证。结果仅返回严格标志、真假、问题与警告计数及契约声明范围内脱敏路径；目标存储哈希、strict 及结果形状不一致即失败。连接、验证或关闭异常不回显原文；关闭后再核对证据。该公开 API 不暴露连接内独立 SQL 查询，因此只读启动设置由 URL 和 sessionSettings 固定，不声称已在同一事务查询 read_only 或复现失败瞬间；禁止并发 Schema 变更。未连接第三座库，不调用迁移、签名、自定义 SQL 或写入，不修改原包、候选、历史、依赖或正式 Provider。
+
+协作容器 Node.js 22.16.0（显式 --experimental-strip-types）三份新增源码语法检查通过，四项模拟测试 4/4；核心 Blob 27975369355abf757ea8df78a72988a9b7716fc3、测试 045165935ef3c738f4e2ec1238018b6852a850f7、入口 2b00d373fe1a5b39e80a95ecbc516f585ecf5d9a 与本地一致，既有 URL 守卫 Blob 3a84f36578e21973f9f1c4fe6a60e391e80fd32b 一致。协作容器无固定 RC、真实候选、数据库、Vite+ 或 pnpm；未执行实际直接入口、完整 Windows 格式/Lint/类型、中文及文档检查。首次实现的 finally 直接抛出关闭异常可能覆盖原失败，提交前改为保留两个固定阶段原因并再次通过同四项模拟；不得以模拟代替真实 RC。
+
+后续真实验收仍仅在历史库进行，原迁移冻结不变。
+
+### 2026-11-26 · PR #228 真实直接结构验收及 E-152 修复候选
+
+维护者 Windows 实测 PR #228：直接结构 4/4、执行检查 4/4、候选完整性 7/7，共 15/15；Vite+ 552 格式/392 受检，0 错误、1 条 eslint(no-unsafe-finally) 警告，中文文案 419、Markdown 96、增量退出码 0，工作区干净。日志未单独打印本机 HEAD；远端 b7d5bcd0e607485e75d11fd880447ea0bc8b0105 相对交付 HEAD ea5cb8760751cf60078e46e291500dd9710f0303 为三份源码排版提交。真实历史验收库 adui_scada_test 的直接宽容与严格验证均 ok=true，issueCount=0、warningCount=0、issuePaths=[]，退出 0，十四文件证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 不变，状态 DIRECT_SCHEMA_REVIEW_REQUIRED，签名与部署均 false。这里的数据库结构警告为零不等于 Vite+ 零警告。
+
+维护者从已存在的离线报告提取出 missingPrecheck 与 missingPostcheck 均仅为 schema.public，identicalChecks=[]。该项为已验收的 CREATE SCHEMA IF NOT EXISTS public（实际 SQL 使用双引号）；Runner 的空 postcheck 不会触发预满足跳过，其余 164 项均具备前后检查。不能据此确认实际执行情况，也没有证据将该项视为失败根因。历史库聚合、直接两种路径各自宽容与严格均通过；未复现失败事务内目录，仍无第三座库原始 schemaIssues，CLI rc.35 实际选项仍未核实。
+
+最小修复：E-107 同类复发。入口原 finally 中直接 throw 违反 no-unsafe-finally，且证据复核失败会覆盖先前验证或关闭失败。将成功与异常路径统一交给 runLockedDirectSchemaReview：先等待原只读验证及关闭，捕获既有脱敏诊断，再独立复核固定指纹；指纹不同或复核异常都记录固定中文原因，最后在普通控制流汇总抛出，不在 finally 内改变控制流。成功或失败均执行证据复核，双重失败不输出成功 JSON、不掩盖原始脱敏阶段，不回显第三方异常。保持原 CLI 参数、连接白名单、超时、只读设置、快照、候选、输出格式、退出码 0/4/1、签名及部署冻结。
+
+协作容器 Node.js 22.16.0 使用与远端当前三个源码及 URL 守卫 Blob 字节一致的文件进行修改；真实执行三份新增修改后源码 node --check 与 node --experimental-strip-types --test scripts/prisma8-native-direct-schema-review.cases.mjs，7/7 通过（保留原 4 项并新增 3 项：关闭后复核及保留不匹配报告、成功验证后指纹变化/读取异常阻断、验证与关闭失败同时证据异常的汇总脱敏）。修复后核心 Blob 5f46984ef13c58344eff20f018434d6301c2e96b、测试 13fd48c16052cddb7fb13ce01f5a11b185b42023、入口 9da69724fd8834e1d4a76008426ef49da93cc8b4 与本地相同。容器没有完整仓库、固定 RC、真实数据库、pnpm 或 Vite+，修复后的 Windows 格式、零警告、文案、文档及真实入口尚待复验；不冒称已经消除全仓警告或迁移成功。
+
+### 2026-11-26 · PR #228 合并及原生迁移结构失败离线诊断候选
+
+维护者在明确打印的 HEAD c10e154cb38170b4c58fa4ab9917a089e5bdadb6 实测 PR #228 E-152 修复：直接结构 7/7、执行检查 4/4、候选完整性 7/7，共 18/18，Vite+ 552 格式/392 受检零警告错误、中文 419、Markdown 96、增量退出 0，工作区干净。按明确授权 Squash 合入 3bfb92229980f5f46a1f7c9244d4e3c59ff83d4c。E-152 静态质量与模拟保护复验关闭；修复前真实历史库直接验证两种模式均通过，但此次日志未包含修复后的真实数据库复验，不重复登记为新的数据库实测。
+
+固定 Provider rc.25 上游 Runner 源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/1-target/src/core/migrations/runner.ts 在事务内结构验证失败时返回 MIGRATION.SCHEMA_VERIFY_FAILED 并携带 meta.schemaIssues；CLI 共享源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/utils/runner-failure-error.ts 将 failure.meta 保留在 CLI 错误对象。上游 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/1-core/framework-components/src/control/schema-diff.ts 的 issueOutcome 明确从 expected/actual 是否存在派生 not-found、not-expected、not-equal；解释类别仅为 differs、possibly-equivalent。固定 CLI rc.35 的最终 JSON 序列化仍须实测，不能将 rc.25 标签共享源码认定为安装包完整实测。现有迁移包装器在内存捕获 stdout/stderr 后仅输出白名单错误码；一次性尝试记录只含范围和指纹。仓库代码未持久化原始 schemaIssues；不能确认维护者是否另有原始机器输出，也不能从恢复后空库反推失败时具体差异。
+
+新增只读离线诊断解析器：只接受已有机器诊断的标准输入，16 MiB 上限，匹配唯一 db.migrate 结构失败封装，兼容直接错误、逐行事件最终错误及最终诊断数组；命令、严重度和结果状态矛盾、重复或畸形结果拒绝。仅输出契约白名单结构路径、由 expected/actual 存在性派生的类别、两种已知解释类别和数量，未知路径脱敏，不输出节点原值、摘要、解释正文、凭据、连接串或任意元数据；缺失列表与空列表分别用 null 与 0 表达，均不代表零差异通过。入口复用原包/固定十四文件门禁，另核对候选 contract.json 长度及 SHA-256，复用已有路径白名单，输出前复核固定证据。离线入口不认证日志来源，不调用 Prisma CLI、数据库驱动、迁移、签名或任何写入；不能通过旧错误码重构丢失的具体结构差异。退出 0 仅表示取得非空合法脱敏差异，4 表示唯一失败但缺少具体差异，1 表示输入或证据拒绝。所有报告 signingAllowed 和 deploymentAllowed 均为 false；旧迁移入口及写入冻结门禁不变。
+
+协作容器 Node.js 22.16.0 实际执行三份新增文件 node --check 及 node --test scripts/prisma8-native-schema-failure-review.cases.mjs，7/7 通过；覆盖三类差异、逐行及最终错误/诊断数组、缺失或空列表、命令/严重度/结果状态冲突、重复封装、畸形数据及输入数量/大小限制。核心 Blob a90b88abba2f3a63554512206a756be402b20ea2、测试 Blob 515b710723eb2cc6318d6239eccd35582872c4e6、入口 Blob 00045f5532d1dd1741facd7b0d1a08975a69c335 与实际本地检查文件一致。现有直接结构路径白名单仅增加导出，未改变其逻辑。容器无完整仓库、固定 RC、真实候选、原始失败机器输出、pnpm 或 Vite+；未实际运行固定候选离线入口、完整 Windows 质量链或数据库。不得宣称真实失败诊断已恢复、具体根因已确认或原生迁移成功。
+
+下一阶段隔离复现方案（仅提议，尚未获得单独数据库操作授权）：保留第三座库、一次性尝试记录、历史验收库、参考库和固定原件。使用完全独立的本机临时 PostgreSQL 实例，选择未占用的专用回环端口、独立数据卷、专用库及一次性凭据，不继承现有容器卷、数据库连接串、根 .env 或其他服务网络。优先核对与既有 PostgreSQL 17.11 相同的实际镜像摘要及环境，不擅自升级。使用候选的独立只读来源副本，核对 CLI rc.35/Provider rc.25、十四文件证据和唯一空起点迁移边；任何执行入口须另行评审连接白名单、实际库/角色/版本、严格空库门禁及一次性授权。仅在明确批准的独立实例执行一次官方原生迁移，捕获官方机器输出，失败时在丢弃原文前提取脱敏 schemaIssues；成功也仅作隔离复现结果，保留现场并停止。若无法取得具体结构差异，再单独评审同一事务内逐项 DDL、目录读取与回滚的实验，而不是继续重复历史库验证。禁止自动创建、重置或清理数据库，禁止重试第三座库、改动正式 Provider、签名、发布或推进引用。本批未实现或执行任何新的在线复现入口。
+
+## 2026-11-26 · 第四座独立实例真实创建与取证入口待验收
+
+维护者日志：PR #229 四组 33/33、Vite+ 555/395 零警告错误、中文 422、Markdown 96、增量退出 0；未打印本机 HEAD 或工作区状态，PR 已合并 68e9cf856d6f8d95b0cea84f69c8cd073c7fb29c。之后真实离线候选复验 0，10 原件、14 候选、165 操作及固定 SHA-256 匹配，官方干跑与完整性检查通过。维护者明确授权并创建第四座独立实例，实测 127.0.0.1:15433、adui_scada_fresh_prisma8_repro、adui_scada_native_repro、PostgreSQL 170011；独立容器、卷、网络与实际镜像 ID 已提供。尚未运行迁移。
+
+新代码定义八项隔离门禁/记录/两路解析/加密回归及两项第四座身份预检回归，Windows 零警告、文案、文档、真实固定 RC、Docker 和 TCP 联合检查均待执行。真实实验必须在这些离线质量门禁通过后人工运行一次；不可删除候选副本或尝试记录以获得重试。成功或失败均保留现场，报告未确认成功不等于回滚证明。捕获文本有进程超时和缓冲上限；进程中断时可能不完整，不允许分享原始内容或凭据。签名、正式接管及前三库迁移继续冻结。
+
+协作容器 Node.js 22.16.0 实际执行新增隔离门禁核心、测试及既有诊断解析器的 node --check，随后 node --test 新增八项全部通过，退出 0；最终核心 Blob b4f0f67c1b6e902fe5c2a1c6f019f88de0d78ff3、测试 Blob bd3fd7dbdf6ff3acaaa78545e953dc7745cfbd13、既有解析器 Blob a90b88abba2f3a63554512206a756be402b20ea2 与本地实测文件一致。此次容器没有完整仓库、固定 RC、Docker、PostgreSQL、pnpm 或 Vite+；两项新增第四座空库回归及完整原空库专项、入口配置、真实命令、中文和文档门禁尚待 Windows 验收。单次真实迁移不得与离线回归混为一谈。
+
+## 2026-11-26 · PR #230 增量验收及 E-153 暂存检查修复候选
+
+维护者 Windows 六组专项 8+12+7+5+7+12=51/51，Vite+ 559 格式/399 受检零警告错误，中文 426、Markdown 96，增量退出 0。五份文件经格式化后处于暂存状态，真实执行指令在工作区干净保护处停止，未启动复现入口、未执行迁移或消耗单次授权。JetBrains 提交时共享 staged 检查五份文件，独立迁移配置 process.env 报 TS2591，提交 Hook 退出 1，故 PR 尚未完成提交质量验收。
+
+仅在 apps/server/prisma8-native-repro.config.ts 顶部增加文件级 Node 类型引用。协作容器 Node.js 22.16.0 / TypeScript 5.8.3 在 types=[] 与模拟 Prisma 模块声明夹具中，原配置 Blob d2c867d9c56e7e91a3323309359ec9ba6c07cdf7 复现 TS2591 退出 2，修复配置 Blob 4f81c22c14a30e60f88def57f7671352dce096c2 检查退出 0；模拟配置工厂验证专用 URL 与七种非法/缺失输入 8/8。不是固定 Prisma RC、真实 Vite+ 或 Windows Git Hook 实测。须保留本地格式化改动、同步修复、复验定向及全仓检查并通过真实提交 Hook，核对最新远端 HEAD 后再执行已授权的第四座单次实验；前三库、候选原件、签名与正式接管继续冻结。
+
+## 2026-11-26 · 第四座真实迁移取证结案及离线 CHECK 修复候选
+
+维护者在实际执行中打印本机与远端 HEAD a25962d7f4eee6db5a7b5cd35080486ec205c0bd；六组专项 51/51、559 格式/399 受检零警告错误、中文 426、Markdown 96、增量退出 0、工作区干净。E-153 修复后的格式提交已推送，未单独提供 Hook 原始成功日志；PR #230 获授权后 Squash 合并 265c02a7fd679abf3771140c4196135b1cbdb40f。
+
+第四座真实实验：身份和 23 类空库、在线唯一空起点迁移边、一次性记录通过；官方退出 2、包装退出 1、MIGRATION.SCHEMA_VERIFY_FAILED，operationsExecuted=null、captureInterrupted=false、encryptedOutputSaved/evidencePreserved/identityPreserved/attemptConsumed=true。真实密文认证解密后的诊断及表达式专项均退出 0，两个 exact-named CHECK 节点差异仅 expression：scada_identities_status_check 长度 100→106，scada_project_release_event_action_check 长度 101→107，均 ARRAY_CAST→ELEMENT_CAST 且 exactHypothesisMatch=true、omittedChangedFieldCount=0。固定十四文件指纹不变，签名及部署均 false。未取得第四座回滚后目录，不据此证明事务已回滚或第三座失败相同。
+
+本次新增修复源和契约严格差异门禁，协作容器 Node.js 22.16.0 对两组实际运行 16/16（新专项 7/7、原独立复现及冻结 9/9），对应核心和测试 Blob 087b847253f7019549a48006ee8d0fc90d6d4ea2、70c02d06228be9858122f34bc8cc3267eb3f730b、cf9b42cf05c684e9679e34553a359ac0b707bc3b、4ad3d92d2015218c9fd03374ae35d7bb82592a02。新发射入口 node --check 通过，Blob c6e35c9283f1787657990d8a7c620212c61bd901；配置 1c4e07db9899fd4cb734879c3a0e496ef658f1f7，其原文 SHA-256 为 1ccda04b90a5f26e95a84c67ef8c1726689430955bd0ccecd6dc0baa7e2b250f。首次传输两份 PSL 模板代码字节不一致已修正，最终与实测 Blob 一致。没有固定 RC、Docker、PostgreSQL、pnpm、Vite+ 或完整 Windows 仓库，未执行真实契约发射、全仓质量链、冻结入口真实运行、任何数据库连接或迁移。模拟新契约不等于官方生成结果。
+
+验收须先运行新专项、原复现与候选门禁、Vite+ 全仓及暂存路径零警告、中文和文档检查。只在干净已审查提交执行独立 contract emit，报告 roundTripVerified、migrationPackageGenerated、signingAllowed、deploymentAllowed 均 false；原件与固定候选复核不变。若官方发射产生额外字段、目录或失败，保留诊断和独立目录，不修改门禁来通过。新迁移包及注释重发射、SQL 实际往返与历史接管策略另行评审。
+
+## 2026-11-26 · PR #231 中文文案生成物误报与 E-154 修复
+
+维护者 Windows 五组专项 43/43（CHECK 修复 7、独立复现及冻结 9、候选 7、DDL 8、恢复 12），Vite+ 563 格式/403 受检零警告错误；中文文案扫描第四座独立副本的根 contract.d.ts 及嵌套快照声明误报四处官方英文注释，增量退出 1，docs:check 因命令链停止未执行。未打印本机 HEAD、工作区状态，也没有真实离线修复契约发射结果。
+
+仅在中文扫描与共享 Format/Lint 增加第四座独立副本的精确目录排除，保留所有自有源码检查和原有排除范围；未修改任何实际证据、迁移候选或数据库。新增两个临时目录子进程测试，注册 test:messages 并纳入 ready。协作容器 Node.js 22.16.0 实际用原扫描器 Blob 3fa8fc77f683c931510d39855f6dee775252e42f 复现回归 0/2（退出 1），修复后 2/2（退出 0），根和快照声明未被写入，自有英文及相邻目录仍拒绝；局部自有文案 7 文件通过，语法检查通过。扫描器 Blob af4904e7fcb233d712da2b16bf3c5cafa9d914bb、测试 Blob 8b05d9dcb232ffb4a48536da9da581e9c51150ba 已核对一致。无真实 Windows Vite+ 或完整仓库执行环境，须复验 test:messages、messages:check、config:check、vp check、docs:check，并以既有十四文件指纹门禁核对实际第四座副本。若证据异常保留现场，禁止覆盖或重试；未获得新发射结果前不宣布 CHECK 修复成功。四座数据库继续冻结。
+
+## 2026-11-26 · PR #231 结案与 CHECK 修复完整离线迁移包专项
+
+维护者 Windows 在 HEAD 15b533cf43cb37b4d378a41248381cc46f3f5b66 完成 PR #231 验收：累计专项 45/45，Vite+ 564 格式/404 受检零警告错误、中文 431、Markdown 96，增量退出 0；固定 RC 官方修复契约发射退出 0，第四座十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 单独复核退出 0。维护者授权后 Squash 合入 3537b9b878a2e33da442c9a7ce16d4c41eb9df26。新 storageHash 为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436；仅两项已定位的 CHECK expression 与新存储标识改变，正式 Prisma 7 和四座数据库均不变。尚未验证 PostgreSQL 往返。
+
+本批新增完整离线修复包入口：固定已验收三份修复契约 SHA-256、原包、正式生成物、八项历史迁移、119 项历史注释、原十四文件与第四座副本，使用固定 CLI rc.35/Provider rc.25 和两份固定无连接配置。仅在 apps/server/.artifacts/prisma8-native-check-repair-package 下新建 plan（十份证据）及 complete（十四份证据）；从 @empty 官方规划，核对完整快照及 46 项独立 DDL，并按原顺序深比较所有结构操作，只允许目标两张表的已知谓词原文替换，前后置检查及参数不可任意漂移。复用既有中文注释构造和 TS 语法节点插入、官方干跑、自发射及 migration check，要求完整 165 项操作与干跑一致，检查覆盖保持原有 schema.public 无前后置检查、其他无相同检查的事实。最终输出官方新迁移标识及本地独立证据指纹，后者不是官方迁移哈希；roundTripVerified、signingAllowed、deploymentAllowed 均 false。新输出目录禁止覆盖、失败保留诊断，精确排除生成目录而非全部 .artifacts；不读连接变量、不执行数据库命令、不改变旧迁移/正式 Provider/冻结策略、不推进引用。
+
+协作容器实际 Node.js 22.16.0 执行新增纯离线专项 8/8、中文扫描实际子进程回归 2/2，均退出 0。核对本机与远端 Blob：共享规划检查 bd6d87702881de12be81b66227965dc3b4b32784、修复包核心 ae67598198fef821af8d6d7f88a116249126cc3f、测试 0a63a04c27802b91cc7618b69537a2a6a35e99e5、既有修复契约核心 f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047、中文扫描 48564f4a5fda754f6ab2f9df9b24f4755be29019、中文回归 a1d93726f0d1d0ac2dc4d69e1323f78fe150215b。协作容器缺少完整仓库、固定 Prisma RC、pnpm、Vite+，未执行真实规划、自发射、完整性检查、全仓质量链或任何数据库命令。必须由 Windows 验收实际官方产物；若 RC 输出或检查条件与已固定证据不同，拒绝并保留，不能放宽门禁以通过。
+
+Windows 增量验收：新专项、原规划/DDL/注释/候选回归、test:messages、config:check、vp check、messages:check、docs:check；干净已审查提交执行 pnpm run db:prisma8:native:baseline:check-repair-package --confirm-offline-check-repair-package，提供报告、两个官方迁移标识、24 文件证据指纹及退出码。既有候选验收结果不得代替新包真实生成结果；不再次发射已验收契约，不删除已有证据。
+
+## 2026-11-26 · PR #232 结案与修复迁移包固定证据复验
+
+维护者 Windows 在 HEAD `31851343f513681db6eb063bcd4aee286f9fad96` 实测 PR #232：累计专项 54/54、Vite+ 569 格式/409 受检零警告错误、中文文案 436、Markdown 96；固定 RC 真实完整离线迁移包生成及生成后质量复验均退出 0，工作区干净。GitHub 确认合并提交 `f39176464e1805a4443cd4360b70891fa0093cb2`。固定结构迁移标识 `fce9c3dfdc0b5300cc1d128b07a6be03f618f89df7dd8d43ed2712881aee93c8`，完整迁移标识 `5cc4b025c41e1b5479cf29a86d6252806ff5bd517ef5c24b80fa6b89cf3c182e`，真实目录 `20261126T0620_scada_native_check_repair`，24 文件及两份配置的证据清单指纹 `13360ad35e8a1742f7d6a8eea99162fc11f33aea4d45d2075390ce4d2bef9a86`。
+
+新增固定证据清单与已有修复迁移包离线复验模式：先验证固定清单指纹，再逐个读取精确目录、拒绝链接或额外对象并核对实际文件长度及 SHA-256；复用历史原包、第四座保留副本、修复契约、固定 CLI rc.35/Provider rc.25、无连接配置门禁。逐项复核 46 项结构、两处允许谓词变化、119 项历史注释、完整 165 项操作、快照与保存的官方干跑，重新运行固定官方 --dry-run 与 migration check，动作前后及失败后重新核对原件，拒绝非零退出、信号、标准错误和证据漂移；失败短路，不覆盖文件、不写新日志、不重新规划或实际自发射、不读取数据库连接信息、不连接或改写数据库。只允许原验收工作区，因为已保存规划包含实际绝对路径。报告只证明离线复验，roundTripVerified、signingAllowed、deploymentAllowed 均 false，四座数据库继续冻结，正式 Prisma 7 不变。
+
+协作容器 Node.js 22.16.0 实际新增纯离线回归 10/10，核心、测试及新服务端模块 node --check 通过；本地与远端 Git Blob 一致：核心 `698f377a503d1f82800fdfac5571fbfef8ec6928`、测试 `45533fc2727e37828bbaf125f8b2c2f77aa5b481`、清单 `f1349416d5d365c3553720d58491d40f320c86c3`、服务端复验模块 `4704f7ff307d1429e6124acf01d6bff7d4173ffe`。清单从维护者上传的真实生成报告独立提取并重算指纹匹配；协作容器没有真实候选的 24 文件、完整仓库、固定 RC 或 Vite+，没有执行新入口真实官方复验及全仓检查，不能把清单一致或模拟命令测试视为真实复验通过。
+
+Windows 验收：新专项 10 项、旧修复包专项 8 项、旧候选专项 7 项、共享配置、Vite+、中文文案及文档；在最终已提交的干净原工作区连续两次执行 `pnpm run db:prisma8:native:baseline:check-repair-package:review`，均应退出 0，报告证据指纹一致、offlineReviewPassed 和 evidencePreserved 为 true，regenerated、roundTripVerified、signingAllowed、deploymentAllowed 为 false。任一步失败停止，不重新生成、不删除现场。
+
+## 2026-11-26 · PR #233 验收结案及最小 CHECK 往返计划
+
+维护者 Windows 在 HEAD `687f17766b02f2d1e7a1b4747bd0545985e1bd64` 实测 PR #233 专项 25/25（10+8+7），Vite+ 573 格式/412 受检零警告错误，中文文案 439 文件、Markdown 96，增量及连续两次官方离线复验退出码均为 0，工作区干净。两份报告均为 NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED、46 项结构、119 项注释、165 项完整操作、24 文件及两配置，证据指纹 `13360ad35e8a1742f7d6a8eea99162fc11f33aea4d45d2075390ce4d2bef9a86` 不变；offlineReviewPassed/evidencePreserved=true，regenerated/roundTripVerified/signingAllowed/deploymentAllowed=false。远端相对交付 HEAD 仅四份源码排版；按明确授权 Squash 合入 `713c638ecb3bb77b0fae85ce474e5b1298d0e407`。GitHub 未返回额外 CI 记录。该验收关闭固定离线复验阻塞，不等于 PostgreSQL 迁移成功。
+
+下一批仅准备两个 CHECK 谓词最小往返验证的离线计划与观察判定器。固定 PostgreSQL Provider rc.25 上游 `packages/3-targets/postgres/2-adapter/src/core/control-adapter.ts`（https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/2-adapter/src/core/control-adapter.ts）确实以 pg_get_expr(c.conbin, c.conrelid) 取得裸谓词并保留原文，筛选本地表 CHECK；不能以 pg_get_constraintdef 或自行格式归一化替代。计划绑定原始及修复契约、已验收 24 文件两配置证据，复用完整官方离线复验。仅目标 public.scada_identities.status 和 public.scada_project_release_events.action，保留实际 varchar(16)、NOT NULL、exact-named 约束名。每项包含 legacy（已确认第四座的旧形式到修复形式差异）、repair（直接提交修复形式）、replay（未来将已核验相同的 repair 反向提取原文再次提交）三阶段；后两阶段预期 pg_get_expr 原文与修复形式逐字一致。共六个阶段，每阶段两个允许值、五个非法值及一个 NULL，预期分别为 accepted、23514、23502，共 48 项计划输入。NULL 拒绝来自 NOT NULL 而非 CHECK。本计划省略其他业务列及默认值，仅测试单列显式输入，不能证明完整表及迁移行为。
+
+协作容器 Node.js 22.16.0 实际运行新增纯离线回归 8/8，通过源文件及测试 node --check（既有契约修复模块 Git Blob f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047 与远端一致）；本地新增核心 Blob 3b1eb946c0315b6e9e1184190072a7dbbbb386cd、测试 Blob 9cc21795c6c356becb38c935e9f18c98c5ef3b8a 与远端一致。未取得固定 RC 完整运行环境、真实候选和 Vite+，未执行服务端入口真实离线计划、全仓检查或任何 PostgreSQL 操作，48 项是待执行的真实实验输入而非已通过数据库用例。
+
+本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
+
+Windows 在原工作区先执行 `pnpm run test:prisma8:native:baseline:check-roundtrip`、既有固定复验专项与共享配置、Vite+、中文文案、文档门禁，再在干净提交执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`；预期 NATIVE_CHECK_ROUNDTRIP_PLAN_REVIEW_REQUIRED、六阶段及固定证据指纹，所有数据库执行及签名/部署许可为 false。失败保留现场。不得把计划输出当作真实观察。
+
+### 2026-11-26 · 固定 CHECK 往返事务模拟与隔离边界
+
+PR #234 已按维护者明确授权合入集成分支，Squash 提交 `1641e2277706c00903d6350b7aa803d3adb20d36`。维护者 Windows 实际 HEAD `92d32648ff23e7d1dd501fc5635a0691630d66d7` 的四组专项 33/33（8+10+8+7）、共享配置、Vite+ 575 格式文件/414 受检文件零警告错误、中文 441 文件、Markdown 96 份均通过；增量退出码 0，真实固定包离线计划退出码 0，工作区干净。远端相对交付 HEAD 仅三份源码排版调整，未返回额外 CI 记录。真实计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`，六阶段 48 个计划输入，所有执行、真实往返、接管、签名和部署许可均 false。
+
+协作容器 Node.js 22.16.0 实际运行新增纯模拟测试 12/12、两文件 node --check 通过，远端 Git Blob 与本地一致：核心 `3cbd314dddc3099db0d65783ca81639d25b96683`、测试 `07f4f8b43df0a7fcfc4f802bd4d17a4a056a0da9`。模拟覆盖固定指纹与篡改、身份及排序规则、六阶段 48 次参数化保存点、真实目录输出的模拟漂移、错误约束与列、错误 SQLSTATE、事务开始失败、保存点回滚异常、外层回滚失败、后置边界漂移及失败停止。没有完整仓库工具链、固定 RC 产物或 PostgreSQL 服务；Windows Vite+、文案、文档、原固定包真实离线计划复验尚待验收。48 项为模拟输入结果，不是数据库实际验证。
+
+新增 `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`（12 项纯模拟，纳入 ready）。原工作区同时复验 `pnpm run test:prisma8:native:baseline:check-roundtrip`、`pnpm run test:prisma8:native:baseline:check-repair-package-review`、共享配置、Vite+、中文文案、Markdown；格式化正常提交后工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。计划必须仍为已验收指纹，全部许可 false，退出 0。不要连接任何数据库，不提供新实例创建或执行命令；若不符停止保留现场。实际隔离实例准备和真实运行须分别明确授权。
+
+## 2026-11-26 · PR #235 验收结案与第五座宿主机只读预检
+
+PR #235 已按维护者明确授权 Squash 合入集成分支 `449a81b406de2a895639126e68327072f22c60e9`。Windows 验收 HEAD `091af5eaef1ae80ed19479d9b5b5edbc03e3b945`：三组专项 30/30（12+8+10），Vite+ 577 格式文件、416 受检文件零警告错误，443 个中文文案文件、96 份 Markdown，增量和真实离线计划退出码 0，工作区干净。固定计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`，全部数据库执行及签名部署许可仍为 false。
+
+本批只增加第五座创建前宿主机只读预检。拒绝非 Windows、附加参数和 Docker 环境覆盖；先从本机上下文取得端点，仅允许两种固定 Windows 命名管道，后续 Docker 查询显式固定 --host，并要求 Linux 引擎、第四座保留容器镜像 ID 与本机固定镜像完全相同、第五座容器/卷/网络均不存在（含停止容器），再用无 Profile 的固定 Windows PowerShell Get-NetTCPConnection 检查所有本地 TCP 记录中的 15434。任何子进程异常、非零、信号、标准错误、资源重名或端口异常均短路并仅返回固定中文诊断；子进程不继承数据库连接串或凭据。不执行 Docker exec、run、pull、create、删除或 PostgreSQL 操作。报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，仅表示当前宿主机观察通过，不认证真实数据库来源；portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均为 false。端口检查不是端口预留，不能证明排除端口范围、未来竞争或 Docker 发布成功。第五座仍未创建，后续身份、排序规则、23 类空库与实际执行许可需分别核实；四座数据库及正式 Prisma 7 保持冻结边界。
+
+协作容器 Node.js 22.16.0 运行新增核心与测试的 node --check 和 node --test 8/8，通过源码 Git Blob 比对（核心 `8dbd9191313017b067023106587902326684bef3`、测试 `1264935cfc29631d2f964fc6920a843d9b0384f1`）。局部夹具仅复用了原模块两个固定导出的原文，未安装完整仓库依赖；8 项为注入子进程模拟，不是 Windows Docker 或 PostgreSQL 实测。完整 Vite+、中文文案、Markdown、真实宿主机预检待维护者执行。
+
+## 2026-11-26 · PR #236 结案及第五座创建前冻结库目录只读采集
+
+维护者 Windows 在 HEAD `ea010893095dcaf434f06dba844f819822b4e45a` 实测 PR #236：三组定向专项 28/28（8+12+8），共享配置通过，Vite+ 579 个格式文件/418 个受检文件零警告错误，445 个自有代码或配置文件通过中文文案，96 份 Markdown 通过；增量及真实离线计划、宿主机只读预检退出码 0，工作区干净。固定计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变。真实宿主机报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，hostPreflightPassed/portObservedUnused=true，portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均 false。GitHub 核实最终 HEAD 与 Windows 日志一致、无冲突和未解决审查意见，维护者明确授权后 Squash 合入 `41a13e7679668c60307e85a8db583b88eba6d209`。端口观察不是预留，未创建第五座实例。
+
+本批仅开发第五座创建前的冻结库系统目录只读采集入口，不提供创建或写入命令。单独确认参数 `--confirm-frozen-catalog-readonly` 之外的任何参数均拒绝；先复用既有宿主机预检，在同一个已核验 Windows 本机 Docker 端点内，以固定 Compose 项目/服务标签定位唯一历史 PostgreSQL 容器并核对运行状态和完整容器 ID；核对第四座容器运行状态、独立实验标签、固定镜像与不同容器 ID。仅两次固定 `docker exec`：通过容器内 `postgres` 系统用户、清空进程继承环境、固定 Unix socket、非交互 psql、不加载 psqlrc、不提示口令，分别访问 adui_scada_test 和第四座专用库。每次使用 `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`、固定超时及 default_transaction_read_only、只读 SELECT `pg_catalog.pg_database`/`pg_control_system()` 并 ROLLBACK；前三库通过同一共享系统目录精确核对三条目标元数据，不分别连接其业务数据库。真实连接身份、角色、170011 版本、当前和默认只读、重复读、目标数据库集合、两个集群标识不重复均须通过。仅比较四个冻结库的 UTF8、locale provider、LC_COLLATE、LC_CTYPE、locale、记录版本及实际排序规则版本；缺失、未知、自定义 ICU 规则或版本漂移一律停止另行评审。不读取业务表、配置凭据、根 .env 或完整容器环境，不修改数据库、容器、卷、网络、访问权限或既有证据，不自动降级认证或重试。此阶段保守地要求四个库的排序规则完全相同；实际存在不同合法设置也必须人工评审，不能为通过而刷新排序规则版本。报告只输出经白名单校验的参考排序规则及计数，不输出容器/集群原始标识。报告状态 NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED，observedDatabaseCount=4、observedClusterCount=2、referenceCatalogObserved/allFrozenCollationsMatch/recordedCollationVersionMatches=true，沿用宿主机八个 false 许可字段；不认证后续目标 TCP 集群或保证下一次状态不变。第五座创建、独立凭据、目标同一连接内核验及真实 48 项实验仍须单独授权和实现。
+
+协作容器 Node.js 22.16.0 实际执行新增 7 项注入子进程回归与原宿主机 8 项回归，15/15 通过；四份相关脚本语法检查通过，缺少确认参数、非 Windows 环境的真实入口均拒绝。新目录核心 Blob `35dbbbec74705491daaae49b845500caafd2597a`、测试 `2b5f67a20fefff915dd48890cc4902a3633cace5`、入口 `430e349669d27fe9721ce389af5c4fae1d192fe4` 与本地实际运行文件一致；原宿主机复用相同逻辑的本地夹具，原模块两个固定导出取自既有源码。协作环境没有真实 Windows Docker、PostgreSQL、完整仓库工具链；没有执行真实冻结库目录读取、全仓 Vite+、中文文案、Markdown 或数据库写入。真实入口依赖两座容器当前均运行、允许本地 socket 的固定角色非交互连接以及 PostgreSQL 17 系统函数；若认证、版本、目录或输出不匹配则保留固定诊断停止，不改变认证规则或数据库以通过。
+
+## 2026-11-27 · PR #237 结案及排序规则证据语义修正
+
+PR #237 已经维护者明确授权 Squash 合入 `fc459570f39708cc3746bc140d8d9e3fe96d6425`。Windows 增量验收四组专项 35/35（7+8+12+8），共享配置通过，Vite+ 582 格式文件/421 受检零警告错误，中文文案 448 文件、Markdown 96，退出码 0、工作区干净；增量日志未独立打印本机 HEAD。维护者另行明确授权四个冻结库系统目录只读核验，并在已打印的合并 HEAD 上实际执行固定离线计划与目录采集，退出码 0；计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变，四库两集群、UTF8、libc（c）、LC_COLLATE/LC_CTYPE 均为 en_US.utf8、locale=null、记录版本=null，旧报告 recordedCollationVersionMatches=true。旧源码将实际版本与记录版本作严格相等比较，由此可知实际版本亦为 null；这只能证明目录字段相同，不能视为排序规则版本或运行库身份已获认证。八项宿主机许可均为 false。
+
+本批修正 PR #237 的目录报告语义，保留已记录的历史原始结果，不改 SQL 查询、只读事务、角色、库名、端口、固定证据及正式 Prisma 7。新增 actualVersion 字段；仅两版本均存在且相等才报告 recordedCollationVersionAvailable=true、recordedCollationVersionMatches=true、recordedCollationVersionStatus=MATCHED；libc 两版本均为 null 时报告 false/null/UNAVAILABLE，缺失字段、单侧 null、版本不一致、非 libc 双 null、自定义规则均拒绝。保留 allFrozenCollationsMatch 兼容字段，其含义仅为目录元数据一致，并以 allFrozenCollationCatalogMetadataMatch 明确说明。两座容器必须与已固定镜像 ID 相同；仅通过 Docker inspect 的固定模板读取挂载目标 JSON（不读取源路径或环境），并以两次 docker diff 检查指定 libc/locale 路径及其祖先和子树的可见变更。路径不规范、挂载覆盖、可见文件变更、异常输出均先于数据库连接拒绝，保留固定中文诊断。本次保守规则也可能因 Docker 报告的祖先目录变更而拒绝正常容器，须评审实际观察，不删除、重建、清理或修改冻结容器以通过。成功仅报告 containerImageIdentityMatched=true、localeRuntimePathsObservedUnchanged=true，collationRuntimeIdentityVerified 始终为 false；Docker inspect/diff 不是实际进程加载库的内容哈希或 locale 行为认证，亦不排除未列路径、环境覆盖、并发变化。第五座尚未创建，后续创建与真实执行仍须分别授权；所有许可及来源认证继续为 false。
+
+协作容器 Node.js 22.16.0 实际运行目录专项 12/12（原 7 项扩展为 12 项）及宿主机专项 8/8，共 20/20，零失败、零跳过；核心、测试、宿主机、入口及宿主机测试的 node --check 均通过。缺少确认参数及非 Windows 环境的真实入口均实测退出 1，未调用 Docker。两个变更文件 Git Blob `ed27fd1d673de3e651313bc819419e1c0a7e8af7`、`66eef27a877a9f5ac61944bd2e337ceebdeefcad`，原宿主机 `a7a56e5e7bbd0ef499c22e6b8712e5d296a36cf9`、宿主机测试 `cc58bd01b67b6e37c7cf92fe797a360f3d09443f`、入口 `e526e21c3362ce05d65ef8b2843f3be4a3a9bc1b` 与本地实测文件字节一致；执行模块仅取原始两个固定导出，未运行完整依赖环境。真实 Windows Docker inspect/diff、更新后的四库目录采集、完整 Vite+、中文文案及 Markdown 待维护者复验；本批未执行任何 PostgreSQL SQL、未创建或修改任何数据库资源。
+
+## 2026-11-27 · PR #238 原端口验收及 15444 调整
+
+维护者在原端口候选 HEAD `9addf51f408c1a326183c4bf0593bdc38bfbfc0c` 的 Windows 验收：四组专项 40/40，共享配置通过，Vite+ 582 格式/421 受检零警告错误，中文 448、Markdown 96，增量退出 0；真实离线计划成功并返回固定指纹，随后真实只读入口因宿主机端口存在 TCP 记录或检查结果异常而退出 1，工作区干净。未定位到具体占用或输出异常原因，未取得更新后的四库目录报告。
+
+维护者明确要求将尚未创建的第五座 CHECK 往返实验宿主机端口由 15434 改为 15444。当前唯一固定目标为 `127.0.0.1:15444`，容器内 PostgreSQL 端口仍为 5432；其他目标身份、镜像、库名、角色、卷、网络和四个冻结库均保持原状。此决定取代前文的第五座 15434 拟议配置，不修改前文历史验收证据。`roundTripTarget.port` 是运行时单一配置源；宿主机预检继续要求所有目标端口 TCP 记录为空数组，旧 15434 及其他目标端口的模拟身份拒绝。不接受环境或参数覆盖，不自动选择端口，不清理进程，不改变创建或执行许可。固定离线往返计划不包含宿主机端口，计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变。15444 实际可用性、排除端口范围及未来发布绑定尚未核实。
+
+更换端口后协作容器 Node.js 22.16.0 实际运行独立局部夹具五项测试，5/5 通过：新目标接受并拒绝 15434/15433/5432、真实日志计划指纹完整复算、新端口 PowerShell 命令及八项许可保持 false、非空及异常 TCP 结果拒绝、目录入口在新端口占用时停止。宿主机模块与远端 Blob `a7a56e5e7bbd0ef499c22e6b8712e5d296a36cf9` 一致；执行核心仅复刻其固定目标、计划和隔离校验相关片段，目录采集使用不会被正常调用的拒绝桩。两份局部模块语法检查通过。不是完整仓库四组测试或真实 Docker/PostgreSQL 验收；Windows 新端口及全仓增量链仍需复验。
+
+## 2026-11-27 · PR #238 结案及第五座待审批创建契约
+
+维护者 Windows 在 HEAD `1321aab1a1a1f52289e1d43d5b6f9b50aef4201b` 完成四组专项 40/40、共享配置、Vite+ 582 格式/421 受检文件零警告错误、中文 448 文件、Markdown 96，增量退出码 0。15434 实际由其他项目容器占用，按维护者决定改用 15444；历史及第四座容器退出后已由维护者恢复原有容器运行。固定离线计划及四库目录真实复验退出码 0，15444 观察无占用，四库两集群及固定镜像、指定路径检查均通过。UTF8、libc、LC_COLLATE/LC_CTYPE 均为 en_US.utf8，locale/version/actualVersion 均 null；recordedCollationVersionAvailable=false、recordedCollationVersionMatches=null、状态 UNAVAILABLE，collationRuntimeIdentityVerified=false，八项许可均 false。工作区干净，维护者明确授权后，PR #238 Squash 合入 `fb0cbd681b19ddd8997401b8f5b9d95ab86fd4ea`，无额外远端 CI 记录。端口未预留，尚未创建第五座。
+
+本批仅增加第五座待审批创建契约及请求匹配器。只读入口复用同一固定本机 Docker 端点的四库目录采集，要求整份参考报告与 PR #238 真实观察完全一致；拒绝缺失、额外、伪造许可、旧端口、资源或镜像变化、排序规则漂移。计划固定 127.0.0.1:15444 -> 5432、原镜像 ID、新独立容器/本地命名卷/专用 bridge 网络、禁止复用现存资源、禁止拉取镜像、禁止自动重启，部分创建失败应保留现场。卷目标拟定为 /var/lib/postgresql/data；实际固定镜像卷声明及入口行为尚待验证。初始化拟定 UTF8、libc、--locale=en_US.utf8（统一 locale 类别，不将其他类别视为已核验）、本地和 TCP 均 SCRAM-SHA-256；专用角色作为隔离实例 bootstrap superuser，禁止用于生产。凭据策略为专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD、32 字节随机数十六进制编码；本批不读取、生成、保存或输出任何真实凭据，不修改根 .env。实际初始化阶段不得提前开启阻止 bootstrap 的全局只读；初始化后未来受控连接必须验证默认只读设置。参数根据 PostgreSQL 17 initdb 文档 https://www.postgresql.org/docs/17/app-initdb.html 拟定，Docker 固定镜像实际初始化、SCRAM 本地认证及 locale 可用性仍需后续验证，失败不得降级、改变既有库或自动重试。创建计划 SHA-256 独立于原 CHECK 往返计划指纹。请求匹配器仅核对专用确认字符串与重新计算的创建计划指纹，不能认证操作者、消费一次性授权或发出 Docker 写命令；当前只读 CLI 不接受创建参数，没有实例创建入口。即使请求匹配，所有许可、creationAttemptClaimed 及完整运行时身份认证仍为 false。未来须在单独明确授权后实现并复验创建执行器、一次性记录、目标资源所有权与竞争检查、凭据传递、实际集群身份排除、排序规则、23 类空库及其他会话检查；不得将已匹配指纹当作真实写入授权。
+
+协作容器 Node.js 22.16.0：新建核心、入口、测试通过 node --check；8 项离线测试全部通过。局部测试仅从已合并执行模块原文提取固定目标与计划指纹导出，无 Docker、PostgreSQL 或完整 Vite+ 工具链。另从维护者上传的 PR #238 真实只读成功报告提取 JSON，实际调用新核心复算创建计划并核对请求：`69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，resourceCreationAllowed=false；原计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变。三个新增源码远端 Git Blob 与本地实测源码一致：核心 `47bf970c49b88bb608bd600572ae8fb1a92d7908`、入口 `83ea8fa70c7f580cfad847ddf6b67ac14b146b57`、测试 `2bb406e41a536e5d7855e1f2a5866af957a7e547`。完整 Windows 增量 48 项、Vite+、中文、Markdown 与新 CLI 的现场只读复验仍待执行；未执行任何真实数据库创建、DDL、迁移、签名或部署。
+
+## 2026-11-27 · PR #239 结案及第五座停止态创建执行器
+
+维护者 Windows 在 HEAD `9fb7261f692b7d1b2756a18719a660c13f36b5d0` 完成 PR #239 验收：五组专项 48/48、共享配置、Vite+ 585 格式/424 受检文件零警告错误、中文 451 文件、Markdown 96、增量退出码 0；正常提交并推送两份源码格式化，远端核对无业务语义变化，真实离线往返计划及创建计划复验退出码 0，工作区干净。原往返计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`、创建计划指纹 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7` 均一致，所有许可及 creationAttemptClaimed=false。维护者明确授权后 Squash 合入 `8b8f5b569b375e11a0fb0c4d2bcd1caec302caa1`，无额外远端 CI 记录。
+
+本批新增受控停止态资源创建执行器：固定 Windows 本机、已验收的专用确认字符串及创建计划指纹，专用凭据只接受 64 位小写十六进制格式，不将格式检查视为随机性证明。重新执行已授权的四库系统目录只读采集，并保留同一预检取得的本机 Docker 端点（不改变原公开报告）；严格复算创建计划并检查固定镜像 ID、唯一卷声明 /var/lib/postgresql/data、入口 docker-entrypoint.sh 和命令 postgres。首次 Docker 写命令前，在同一工作区根目录 `.artifacts/prisma8-native-check-roundtrip-creation` 原子独占创建目录并以 wx 及 flush 写入 attempt.json，记录固定指纹与 128 位随机尝试标识，不含凭据；路径链接、任何已有目录或登记失败均拒绝。依次创建专用 local 数据卷、bridge 网络、停止态容器，仅回环 127.0.0.1:15444 映射 5432，镜像 pull=never、restart=no、volume-nocopy，所有资源带固定 scope 与本次尝试标签；检查卷驱动、标签、无额外选项、容器占用，网络完整 ID、唯一名称、标签及端点占用，随后检查容器完整 ID、created 状态、固定镜像、卷挂载、HostConfig 端口配置、网络模式、禁止特权/自动移除/全部端口发布、入口及命令，最后复验卷与网络归属并独占保存 result.json。Docker volume create 同名可能复用，不能仅凭返回名称判成功；任何异常均停止、保留记录和部分资源，不清理、不重试、不启动。专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD 仅通过创建容器子进程 POSTGRES_PASSWORD 传递，不进入命令参数、报告、记录或源码；其他子进程仅继承既有系统白名单。不读取完整容器环境，Docker 管理员仍可访问容器保存的环境值，后续必须保护该本机凭据。停止态成功报告只描述观察到的资源及已消费的尝试记录；containerStarted、databaseInitialized、portReserved、resourceCreationAllowed、databaseExecutionAllowed、roundTripVerified 等均 false。停止态端口映射配置不等于实际端口绑定，卷标签及本地登记不能防御具备 Docker/文件系统管理权限的并发操作者或跨工作区故意重置；实际启动前须重新核验归属、容器配置、端口及证据。本批未创建真实资源、未运行 Docker start/SQL/迁移，不改变四个冻结库、历史证据或正式 Prisma 7。真实停止态创建必须在验收、合并后取得维护者单独明确授权；启动与初始化仍为后续独立阶段。
+
+协作容器 Node.js 22.16.0 实际通过新增八项及宿主机八项、参考目录十二项、创建计划八项局部回归，共 36/36，零失败、零跳过；新增核心、测试及修改后的宿主机模块语法检查通过，无参数实际入口退出 1。测试使用注入子进程和真实独立临时文件系统，不接触 Docker。新增核心 Git Blob `2fbd04b1dc32f135aa2f3a50b88b57953d639767`、测试 `e38e3162b114c1258582ba5ac1ca81330196a447`、修改后宿主机 `2a1f00b806026d8a16eedc00753bfa1e82e2d101` 与远端一致；固定参考与创建核心、宿主机专项副本亦与合并基线一致，执行模块仅取固定导出，参考与创建专项使用等价局部源码副本（未同步全部排版）。未运行完整仓库、真实 Windows Docker、Vite+、中文、Markdown 或 PostgreSQL，Windows 六组 56 项和静态质量链待验收。
+
+## 2026-11-27 · 全新安装候选验证
+
+维护者清理旧项目八容器、六命名卷、三网络；新基础设施实际 PostgreSQL 19.0、Redis 8.12.0、Keycloak 26.8.2，PostgreSQL 与 Redis 健康检查通过，Keycloak 启动，业务库 public 表数为零。未证明 OIDC 联调或业务应用运行通过。
+
+协作环境 Node.js 22.16.0 对远端 Git Blob 0e215f3d6cfdbf56cb7c07d09f7db00c98a6121b 核心进行语法检查；测试 Blob 75243c1f50266dc08e0921e62a9333cabd5243f8 与远端一致，筛选执行十项纯逻辑测试，10/10 通过。首次运行额外源文件测试因容器没有完整检出、缺少 PSL 文件而失败；随后筛选十项通过，不登记全十一项通过。远端原生 PSL 源重建前指纹与此前验收一致，仅调整文件头说明，新源 SHA-256 e35bc6e946220df310ce39bdc61e3072ac00630c76efdbb449770e6606e8d61b，十二模型、三十六 CHECK；最终注释 SQL 指纹 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7 与历史最终评审一致，共一百一十九条。完整 Windows 新增测试、原预检与 Docker 回归、Vite+ 质量链及真实官方 CLI 发射、PostgreSQL 19 只读规划待验证；未执行真实初始化、迁移、数据写入或启动业务应用。
+
+## 2026-11-27 · PR #241 排序告警修复复验
+
+维护者 Windows 修复前四组专项 52/52，配置通过，Vite+ 592 格式文件/430 受检文件零错误、三条排序告警，中文 457 文件及 Markdown 97 份通过。该结果不代表零告警或真实数据库通过。
+
+本批核心四处显式字符串码元比较，新增两处中文集合类型说明，测试固定预期顺序并增加两项回归；未修改原生 PSL、中文注释 SQL、固定依赖或数据库安全门禁。协作容器 Node.js 22.16.0 对提取片段执行 node --check 及三项局部测试（两项新增回归与比较器等价性）均通过；片段 4874 个 UTF-16 码元，FNV-1a 1d9d1de5，核心及测试 Git Blob 7295a31fd1e4da7509a51a43a81a107a2f450668、764c8c968e7aba985fb4d89e1bd1acb05184e096 已回读一致。完整仓库未检出，协作容器无 pnpm/vp，修复后完整四组专项预期 54 项、Vite+、中文文案、Markdown 和真实官方发射及 PostgreSQL 19 只读预览仍待 Windows 实测。未执行数据库初始化、历史迁移或业务启动。复盘见 E-156。
+
+## 2026-11-27 · 全新数据库正式初始化与原生运行时评审候选
+
+维护者在 Windows 已验收 PR #241 四组专项 54/54、Vite+ 592 格式/430 受检零警告错误、中文 457、Markdown 97、增量退出码 0；格式化提交 09385336fa9a7880965c89597b85dea7b1742a99 正常 Hook 通过并推送，实际原生发射及 PostgreSQL 19 空库只读预览退出 0（23 类、45 项新增）。明确授权后 Squash 合入 4a06766da5d9ec99bed96104dc26c17d21112d43。合并后再次空库预览成功；维护者另行授权并在检查分支、提交和干净工作区后真实首次初始化，返回 FRESH_DATABASE_INITIALIZED；独立 docker:db:status 返回 FRESH_DATABASE_VERIFIED，退出码 0、工作区干净。两次报告均为 serverVersion=190000、databaseInitialized=true、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释。此后禁止重复首次初始化或运行旧迁移。
+
+下一批先核对现有 Prisma 8 候选与真实原生生成物的类型兼容性，再切换正式注入。新增固定只读运行时评审入口：重新官方发射并核对存储、声明和中文注释，复用已评审的关系差异（末次发布事件六字段关联、无反向导航），保持历史标识门禁；用已安装 TypeScript 分别对旧生成物及内存替换的全新 JSON/声明进行完整服务端类型检查，不改写旧 Git 生成物。通过后复用现有本机 Docker 身份、严格 db verify 与注释核验，Prisma 8 使用全新原生契约及同一调用方 pg.Client；在查询前后核对真实集群、业务库角色、public Schema 与事务默认只读设置，只查询随机不存在的租户/工程联合键，要求 null，按顺序关闭客户端与连接，失败脱敏且不返回成功。无 DML、DDL、签名、迁移或业务值输出，不注册正式 NestJS Provider，不扩大既有隔离写入候选范围。只有评审通过才进入正式 Provider 与仓储装配阶段；真实应用启动、写入、事务、双框架及生产部署仍须分别验收。
+
+协作容器 Node.js 22.16.0 实际执行新探针及测试的 node --check 和四项注入连接/运行时测试，4/4 通过；对应 Git Blob db61af31268ba26e3505e83eb89ce0d603746b5d、e481204204aac4b05a94ed1f8f2193e9c868af61。协作环境无完整仓库、pnpm、Vite+、固定 Prisma 8 依赖或本机 PostgreSQL；旧/新完整类型检查、运行时真实连接、其余专项与代码质量链尚未执行。Windows 预期 test:prisma8:fresh 17 项及 test:prisma8:native:runtime 7 项；新增评审不进入自动 ready 的真实连接阶段。未执行任何真实数据库操作。
+
+## 2026-11-27 · 原生运行时评审通过与 NestJS Provider 候选
+
+PR #242 维护者 Windows 实测 Core 构建与旧客户端离线生成成功，专项 24/24（17+7），Vite+ 594 格式/432 受检文件零警告错误，中文 459 文件、Markdown 97、增量退出 0；两份源码格式化正常提交 Hook 通过并推送 HEAD f1324c126bf7e7954cce30c207776f14d1d2412b，远端差异仅排版。实际 FRESH_RUNTIME_REVIEW_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释；databaseInitialized、nativeRuntimeTypesVerified、missingScopeVerified、readOnlyBoundaryVerified 均 true，providerSwitched=false，退出码 0、工作区干净。已按维护者明确授权 Squash 合入 87c8382b41418bee1e65d354705ec12ccdeb2d69，未取得额外远端 CI 记录。
+
+实现独立 Prisma8Service 与 Prisma8DatabaseModule，原生 PSL 离线发射到 src/generated/prisma8-runtime，固定版本、存储指纹、声明和注释门禁沿用全新安装入口；旧 Prisma 7 客户端及旧 Prisma 8 候选生成物暂保留，禁止互相覆盖。原生生成纳入服务端 db:generate 及构建/启动依赖，Git、Docker 上下文及共享 Format/Lint、中文扫描仅排除新增的精确生成路径。Provider 由 Nest 管理一个进程内连接池，初始仅支持本机 adui_scada:15432 固定开发边界，拒绝生产环境默认配置、远程/Keycloak/历史库、额外连接参数；启动查询核验实际数据库、角色、Schema、PostgreSQL 19、只读设置、集群标识及 app 原生标记 core_hash，不能把官方运行时的 marker 告警当作硬门禁。随后以实际原生 ORM 查询随机不存在工程联合键，再复核连接；启动失败或关闭期间拒绝暴露客户端，按顺序释放运行时和调用方连接池，保留脱敏失败阶段。单独只读烟测复用既有严格结构、注释和本机 Docker 集群身份核验，使用编译后的 Nest TestingModule 实际装配 Provider，配置只读且传入真实集群标识，确认启动、同一提供方客户端、关闭后拒绝访问。当前不导入正式身份或工程 HTTP 模块、不改变旧业务仓储隔离门禁；providerSwitched=false。正式生产角色及容器内连接策略、业务写事务、实际 Docker 构建和完整应用切换另行验收。
+
+协作容器 Node.js 22.16.0 实际运行新增边界与生命周期测试 8/8，TypeScript 5.8.3 对纯边界源码执行 strict noEmit 检查通过；对应源码 Blob 14712538534a11746fa32507f4579581ab292f7a、测试 Blob 82a5aa7df6d2b92fb9f41474f42a4e53160bba1f。测试覆盖 URL、角色和标记等边界漂移、启动前不可用、单次释放、启动失败、启动期间关闭、关闭失败及双重失败脱敏。该环境没有实际固定 Prisma RC、完整 NestJS 依赖、pnpm/vp 或维护者 PostgreSQL，未执行实际原生发射、新 Provider 编译/真实烟测、完整 Windows 质量链与 Docker 构建；不得把模拟测试描述为正式业务运行。
+
+## 2026-11-27 · 原生 Provider 验收与身份 ACL 查询端口接入
+
+PR #243 维护者 Windows 实测 Core 构建、Prisma 7 客户端及 Prisma 8 原生运行时契约离线生成成功（FRESH_RUNTIME_CONTRACT_EMITTED、databaseAccessed=false）；三组专项 34/34（25+7+2），Vite+ 600 格式文件/438 受检文件零警告错误，中文 465 文件、Markdown 97、NestJS 构建及增量退出码 0。三文件正常格式提交 34dc2a20f39770f33085a8babefb094d54a85931 已推送，远端核对仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、providerReady/providerClosed/readOnlyBoundaryVerified/databaseInitialized=true、providerSwitched=false，原存储指纹及 12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释一致，退出码 0，工作区干净。按维护者明确授权 Squash 合入 b9248081590337c50f4151eb5cc2b5c09b1f9fce；未取得额外远端 CI 记录。
+
+将正式 OIDC 回调的已验签外部身份预绑定查询与工程 Guard 的前置 ACL 查询从具体 Prisma 客户端抽离为 AuthorizationReadStore，保留旧模块显式 Prisma 7 过渡绑定及已有联合键、权限投影、会话签发、HTTP 与锁内授权语义。新增 Prisma8AuthorizationModule，仅导入已验收 Prisma8DatabaseModule，使用新原生生成 Contract 实现相同端口，不复制连接池，不使用旧隔离候选或将隔离库写入门禁改为业务库。身份只查询既有活跃映射，不自动注册；完整权限集合仍由 hasProjectPermission 按可信租户、主体、工程及操作判定，非法标识查询前拒绝，固定主体副本，数据库异常固定 503，不记录授权成功。原生仓储使用 Prisma8Service.readTransaction 及新 readPrisma8Transaction，在同一 ReadCommitted 事务前后核验实际数据库、角色、Schema、PG19、集群标识、原生 marker core_hash、配置与实际只读状态及非恢复模式；只有查询及边界复核均成功才返回结果。读仓储只包含 SELECT/ORM 查询；真实烟测强制 PostgreSQL 默认及事务只读，正常可写配置只核验模式一致，不宣称所有未来业务事务都强制只读。扩展原有真实 Provider 烟测：实际 Nest 装配原生端口及正式 ScadaProjectGuard，以随机不存在的身份及租户/工程联合键核验空映射、空授权、固定 404 与 permission_denied 审计，不打印凭据或业务行，不写业务数据、不挂载 HTTP 根模块。当前正式 HTTP 根模块仍明确使用旧过渡绑定，providerSwitched=false；会话及 OIDC 事务、工程版本和发布写事务统一切换后再启动原生正式应用，禁止混合两代数据库运行。
+
+协作容器 Node.js 22.16.0 实测新增纯端口查询键和不可变主体测试 3/3；源码 Git Blob d911e761803f1f267000e62298bb9e2ba1468b2b、测试 Blob 272d9afe2f0969e996999e3da703c88ab6704823 与远端一致。对原生事务包装器 Blob e9518cc0c923508bd059bd67e869c9f399ee63a1 使用 TypeScript 5.8.3 noCheck 转译并在模拟事务上验证正常前后核验、错误库/只读状态/隔离级别及查询后标记漂移，5/5 通过；这不是 SDK 类型检查或真实 PostgreSQL 验收。新增六项原生仓储 Vitest、Guard 脱敏错误及模块装配断言尚待维护者 Windows 执行；协作容器无完整仓库、固定 Prisma RC、pnpm/vp 或本机 PostgreSQL。未执行实际业务写入、完整工程测试或真实烟测。
+
+### 2026-11-27 · PR #244 E-157 历史 ACL 构造调用修复
+
+维护者 Windows 修复前全新原生专项 28/28、原生运行时 7/7、四份身份及装配专项 39/39、HTTP E2E 63/63，共 137/137；Core 构建、双版本客户端/契约生成及共享配置通过。vp check --fix 在 445 个受检文件中报告 TS2739 一项错误、零警告，格式化完成但增量退出码 1；后续独立 vp check、中文、文档、服务端构建和真实原生授权只读烟测未执行。日志未给本机 HEAD。
+
+仅为 apps/server/test/prisma8-project-acl.db-spec.ts 中的历史 Prisma 7 Guard 构造调用补充 Prisma7AuthorizationReadStore 导入并包装原 database；复用现有适配器，不新建客户端、不改变 Prisma 8 对照 Guard、隔离库 URL、授权断言、撤权及清理逻辑。不改生产代码、数据库或配置。
+
+已逐一读取当前 PR HEAD 的 59 份服务端 spec、db-spec、e2e-spec，核对两个改造构造函数的直接调用及显式 provider 匹配，并复核正式身份模块及原生烟测；仅发现上述直接构造调用仍传原数据库对象。协作容器 Node.js 22.16.0 / TypeScript 5.8.3 用最小依赖类型声明及对应真实端口签名复现旧调用 TS2345（缺少同样两个方法，退出 2），包装后 strict noEmit 退出 0。此为最小类型复现，不是仓库 TypeScript 6 或真实 SDK 编译；完整 Windows Vite+、中文、文档、服务端构建、原生只读烟测仍待复验，未执行历史数据库专项或数据库写入。
+
+保持 Draft；验收通过并经维护者授权后才可合并。
+
+### 2026-11-27 · PR #244 复验结案与原生身份事务候选
+
+PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式文件/445 受检文件零警告错误、中文 472、Markdown 97、NestJS 构建、git diff --check 均通过，增量退出 0；此前修复前专项与 HTTP E2E 137/137。正常 Hook 格式化提交 c0990870e13e8cf143af144344c3f96d49b563ae 已推送，五文件远端差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、databaseInitialized/providerReady/providerClosed/readOnlyBoundaryVerified/authorizationReadVerified/missingProjectDenied=true、providerSwitched=false，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释，退出 0、工作区干净。维护者明确授权 Squash 合入 02087974c7cba37857cae1984c0a5fc2a09fb16d；无额外远端 CI 记录。E-157 的 Windows 类型修复已复验，历史隔离库写入测试未执行。
+
+新增共享 Prisma8AuthTransactionPort、Prisma8SessionOperations 与 Prisma8OidcLoginOperations；共享层仅使用参数化 raw/query/execute，历史候选保持原构造签名、隔离库名、只读模式、隔离级别、专用随机测试 Issuer 及旧清理定时器门禁，独立原生实现通过 Prisma8Service.readTransaction/writeTransaction 接入新生成 Contract。原生写事务明确拒绝只读配置，在同一 ReadCommitted 事务业务执行前后复核真实业务库、角色、Schema、PG19、集群标识（配置时严格比对）、原生 marker core_hash、可写模式及非恢复状态，后置校验抛错依 SDK 事务约定回滚。保留会话十秒/OIDC 五秒事务超时、主体共享锁与独立摘要、租户主体会话精确撤销、State/浏览器绑定摘要、PKCE S256、AES-GCM、Nonce、一次性 FOR UPDATE 加条件更新和按 Issuer 的 128 条有界清理。原生身份模块仅绑定现有会话及 OIDC 服务令牌、共享授权模块与原生数据库，不挂 HTTP 路由，不导入旧数据库模块；旧正式根模块不变。只读烟测覆盖随机不存在会话、Bearer/Cookie 拒绝、会话签发撤销与 OIDC 创建消费清理的拒绝，使用内存合成 OIDC 配置和禁止网络访问的发现替身；原生模块暂不启动清理定时器，正式根模块切换后另行验收。
+
+协作容器无固定 Prisma SDK、NestJS 依赖、pnpm/vp 和维护者数据库，不能执行完整工程类型检查或真实烟测；TypeScript 5.8.3 --noCheck 转译与远端 Blob d9dfed983c91273f13cc6da2698ef8ed29e50327 一致的事务包装器及 Blob 14712538534a11746fa32507f4579581ab292f7a 一致的原有身份边界，Node.js 22.16.0 实际模拟回归 6/6（正常提交顺序、只读早拒绝、错误/缺失身份、后置漂移模拟回滚、业务异常、原只读查询）；不代表实际 PostgreSQL 提交回滚或 SDK 类型已验证。静态逐字比较原候选移入共享层的八条业务 SQL 完全一致，新增 9 项身份 Vitest 和 1 项模块装配断言待 Windows 实测；历史 4 项会话及 5 项 OIDC 单元测试亦须回归。未执行数据库写入、重复初始化、历史迁移或真实 IdP 调用。
+
+### 2026-11-27 · PR #245 E-158 双 Contract 身份端口类型修复
+
+维护者 Windows 首轮 Core 构建、Prisma 7 客户端与新原生运行时契约离线生成（databaseAccessed=false）、共享配置通过；全新专项 28/28、运行时 7/7、身份与装配 58/58、HTTP E2E 63/63，合计 156/156。vp check --fix 报历史会话与 OIDC 候选 operation(tx) 两项 TS2345，原生身份测试 timeout 默认值一项 typescript(no-useless-default-assignment) 警告（451 受检文件）；格式化完成但增量退出 1。日志未提供本机 HEAD，后续独立检查、文案、文档、构建、真实烟测未运行。
+
+根因为共享端口 Pick<Prisma8Transaction, raw/query/execute> 仍携带新原生 Contract，历史 Contract 的主键声明缺少新生成物要求的 name，raw.sql 类型不可赋值。改为仅暴露参数化文本查询与影响行数的共享端口，两套适配器分别以自身强类型事务构造和执行 SDK 计划；保留相同的八条业务 SQL（模板逐字核对）、参数、事务超时、历史隔离库/Issuer 门禁、原生前后边界及只读拒绝、业务锁和影响行数判断。不跨契约断言、不拼接 SQL、不新增连接或修改生成产物。返回列缺失或非文本时失败关闭；移除测试模拟函数冗余默认值。新增两项 Vitest 候选覆盖两代适配器参数转发及异常行、原生签发遇异常行模拟回滚。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3，以最小 SDK 类型模型（两代 Contract 主键 name 差异、参数化 raw/query/execute 签名）复现旧端口类型不兼容并通过新端口 strict/noUncheckedIndexedAccess/exactOptionalPropertyTypes 检查；四项独立模拟测试通过，覆盖两代适配器参数转发、影响行数及缺失/继承/非文本列拒绝。该模型不等于已安装 Prisma 8 RC 或仓库 TypeScript 6；协作容器无固定 SDK、完整依赖、pnpm/vp 或本机 PostgreSQL。Windows 完整增量质量门禁及真实只读烟测仍待复验。保持 Draft，不切换正式根模块、不启用定时清理、不执行数据库写入或迁移。
+
+### 2026-11-27 · PR #245 E-158 结案及原生工程查询接管候选
+
+维护者 Windows 复验全新专项 28/28、原生运行时 7/7、身份与装配 60/60（原生身份 11/11）、HTTP E2E 63/63，共 158/158；Vite+ 613 格式文件/451 受检零警告错误、中文 478、Markdown 97、NestJS 构建和 git diff --check 均通过，增量退出码 0。正常 Hook 格式化提交 da0c6a5eb348e5c4238b032bf30eed26f0ee937b 已推送，核对 13 文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释及存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436 一致，databaseInitialized/providerReady/providerClosed/readOnlyBoundaryVerified/authorizationReadVerified/sessionReadVerified/identityWriteDenied/oidcDiscoverySkipped/missingProjectDenied=true，providerSwitched=false，退出 0、工作区干净。维护者明确授权 Squash 合入 feat/mvp-first-integration 的 961c4b0278d3de5fbd4fdc3515b3783fb58f43e8；E-158 类型与 Lint 复验关闭，真实身份写入、并发消费及回滚仍未验收。
+
+将已实现的历史 Prisma 8 工程查询候选五项业务逻辑抽出 Prisma8ProjectQueryOperations，历史构造签名、隔离库名、读已提交且非只读事务门禁不变。原生 Prisma8RuntimeProjectQueryStore 和独立 Prisma8ProjectQueryModule 仅使用已验收 Prisma8Service/Prisma8DatabaseModule，不增加连接池、控制器或正式根模块。将 E-158 已验收的参数化文本适配器移至数据库公共层 Prisma8TextTransaction，分别使用历史与原生强类型 SDK 事务构造计划，增加 BigInt 参数支持并保留身份适配器原错误文案；工程端口仅暴露 queryText 与完整 ACL 投影，不暴露 executeCount。
+
+五条业务 SQL 模板逐字比较一致，保留租户/主体/工程联合条件、工程 ID 升序及稳定游标、历史修订号 BigInt 倒序分页、最多 100 条、轻量摘要与原 SHA-256/元数据完整性、发布预检 head 一致性。详情、历史列表、指定快照及发布预检必须先取得同一工程共享锁，再查询完整权限集合并使用既有纯策略复核，拒绝未知权限；不得把前置 Guard 当成锁内授权。原生列表允许严格只读，四项锁内查询要求非只读事务配置（PostgreSQL 不允许 READ ONLY 执行 FOR SHARE），在取得事务前调用现有 assertWritable 拒绝，不通过无锁替代、自动改变连接模式或 DML 绕过；正常非只读模式仅执行 SELECT/ORM 查询，统一由 readTransaction 在同一 ReadCommitted 事务前后核验真实身份与标记，超时十秒。
+
+协作容器 Node.js 22.16.0 使用与远端 Git Blob 18e7d905a9d1b3c70b5e0301bc728c01d43cb4a1 一致的 Prisma8TextTransaction 源码，执行 node --experimental-strip-types --test 的六项独立模拟测试，6/6 通过，覆盖两代参数化 BigInt 转发、影响行数、缺失/继承/非文本列及调用方错误消息。源码迁移的五条业务 SQL 模板已静态逐字比较一致。容器 DNS 无法访问 GitHub、未安装固定 Prisma SDK、NestJS、pnpm/vp 或维护者 PostgreSQL；新增十项仓库 Vitest、一个模块装配断言、历史/身份回归、完整 Windows 质量链与真实只读烟测均待执行，不声称真实锁并发、正向授权工程读取或写事务通过。真实烟测扩展为随机不存在主体的空工程列表与四项锁查询提前拒绝，新增 projectListReadVerified、projectLockedReadDenied；原全部字段保留，providerSwitched=false。未执行数据库写入、历史迁移、重复初始化或正式 HTTP 启动。后续工程创建/追加版本的 CAS、审计与发布初始状态事务单独迁移并验收。
+
+### 2026-11-27 · PR #246 验收关闭与全新原生工程写入
+
+PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查询 16、身份与装配 61、HTTP E2E 63），Vite+ 617/455 零警告错误，中文 482、Markdown 97、构建及增量退出 0；实际 PostgreSQL 19 只读烟测 FRESH_PROVIDER_SMOKE_READY，projectListReadVerified/projectLockedReadDenied/missingProjectDenied=true、providerSwitched=false、指纹及 12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致。验收 HEAD 2a9e4c2b47611dde4764a7097a7c6af16a06a83d，合并 c4ebce33dc210e5e4b38492f37f726aede28ed22。
+
+本批只开发全新原生写事务：原有九条业务 SQL 模板静态逐字核对，新增十一项原生 Vitest 模拟回归，独立模块装配及真实只读烟测新增 projectWriteDenied 标志。协作环境无法安装固定 SDK、执行完整 Windows 工具链或连接维护者数据库，新增测试、完整编译与真实烟测待验收；模拟拒绝不等于真实 PostgreSQL 回滚。不得为本批运行历史数据库或迁移专项。
+
+### 2026-11-27 · PR #247 原生工程写入验收及 E-159 修复
+
+维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
+
+后置身份漂移夹具将 role 改为 wrong，实际由 requirePrisma8RuntimeIdentity 抛出“Prisma 8 运行时数据库身份、标记或连接边界不一致”。仅将无参数 toThrow 改为该确定文案，保留边界执行顺序、模拟拒绝及未提交断言，不改变业务 SQL、提供方或数据库。静态复核唯一替换及该文件无无参数 toThrow；Windows 原生写事务定向测试、Vite+ 零警告及中文/文档检查待复验。 保持 Draft，维护者已同意继续，但零警告复验完成前不合并。无旧库迁移、初始化或真实业务写入。
+
+### 2026-11-27 · E-159 复验关闭与全新原生发布仓储验收边界
+
+维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。
+
+协作容器 Node.js 22.16.0 对从远端源码摘取的请求解析、语义哈希和十进制安全整数校验逻辑（Unicode 等价转义、最小领域错误类）运行 node --experimental-strip-types --test，6/6 通过；验证发布/回滚白名单、代次、UUID、摘要字段顺序与作用域、非规范整数和溢出。远端静态核对 13 条参数化 SQL、2 条 DML 仅位于固定门禁之后、15 项新增 Vitest 无无参数 toThrow。协作容器 GitHub Git 网络 DNS 不可达，未安装固定 Prisma SDK、pnpm/vp 和完整 NestJS 依赖，新增仓库 Vitest、类型检查、构建、真实 PostgreSQL 烟测待 Windows 实测；未执行真实业务写入、发布、回滚、旧迁移、重新初始化或正式根模块切换。模拟拒绝或幂等重放不等于真实成功发布事务通过。
+
+新增原生只读烟测标志 releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied；此前全部标志及存储指纹/结构保持不变。通过只读拒绝并不证明具有真实授权的当前发布正向读取或写入回滚已经验收。
+
+### 2026-11-27 · PR #248 已验收与正式原生根模块待验收
+
+维护者 Windows 完成 PR #248 全新专项 28/28、原生运行时 7/7、发布/回滚 15/15、工程写入 11/11、工程查询 10/10、装配 9/9，共 80/80；Vite+ 621 文件格式正确、459 受检文件零警告/Lint/类型错误、中文 486、Markdown 97、NestJS 构建及 git diff --check 均通过，增量退出码 0。格式化提交 ef817ad58bb2eae05322d674c8b3353cc5494ad8 已推送，三文件差异为排版与尾逗号。真实 PostgreSQL 190000 FRESH_PROVIDER_SMOKE_READY，原存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，releaseLockedReadDenied/releaseWriteDenied/rollbackWriteDenied 及既有只读标志均 true，providerSwitched=false，退出码 0，工作区干净。维护者明确授权，PR #248 已 Squash 合入 feat/mvp-first-integration 的 a6b388334addb25b39e3a06a9f4b2da77339b09c。
+
+新增两项原生 OIDC 清理生命周期测试及两项正式根模块 HTTP E2E，现有九项模块装配断言更新为实际原生路径；HTTP 工程 Mock 改为直接授权读取端口，不再借用旧 Prisma 7 Mock ORM。真实 Provider 烟测编译实际 OidcEnabledAppModule，覆盖两个正式 Controller、唯一原生服务、旧 DatabaseModule/PrismaService 未注册、两个工程令牌与原生实例相同及原生授权/会话绑定。烟测仅对进程模块导入临时设置同步静默日志并恢复原环境值，强制真实业务库严格只读且禁止 IdP 网络发现，不监听 HTTP 端口，不启动过期清理。成功后由探针本身返回 nativeRootAssemblyVerified、singleNativeProviderVerified、legacyProviderAbsent、providerSwitched=true；独立 runtime-review 不验证根模块，不能代替本烟测。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3，实际执行正式身份及工程持久化模块两个精确 Git Blob（dc6c9db63cb1b79f14a0d0ba1b475bd50410040e、d945547c8c30b3fb4f79388a26bd31b531891cd6）的 SHA-1 核对、语法解析及转译，均通过；未执行完整仓库类型检查、Vitest、NestJS 装配、真实 PostgreSQL 烟测。协作容器 GitHub Git 网络 DNS 不可达且无固定仓库依赖、pnpm/vp；本次没有真实数据库写入、重新初始化、历史库迁移/验收、正式应用监听或生产发布。 预计全新专项 28 项、原生业务与装配 Vitest 64 项、HTTP E2E 65 项，共 157 项。完整质量门禁和新根模块真实烟测均须维护者 Windows 实测，不得沿用旧候选烟测成功状态宣称正式根模块已验收。
+
+## 2026-11-27 · PR #250 原生清理首次 Windows 验收及 E-160
+
+维护者在 PR #250 完成锁文件刷新及冻结安装（pnpm 12.23.0，退出码 0，移除 98 个包及三项 Prisma 7 直接依赖），离线原生契约生成指纹及结构数量不变；依赖目录 13 清单/54 Catalog、共享配置、环境、中文文案 365 文件、全新专项 28/28、CLI 4/4、双框架及服务端类型检查、82 文件 966/966 单测均通过。Vite+ 498 格式文件/339 受检零错误、两条条件断言警告；OIDC 身份预绑定 13/14，旧错误正则导致 ready 退出码 1，之后的阶段未运行。维护者已推送锁文件及排版提交 `fb46b1d6710deea055fa90a92b4df97c3a2c73db`。
+
+E-160 修复仅调整中文注释测试和身份标记拒绝测试：统一主流程断言、精确异常文案、预览与写入均拒绝且回滚，无插入或提交。原生模型与属性注释收集逻辑及两项缺注释反例已静态复核，未执行 Windows Vitest/Vite+ 或完整 ready，不视为已验收。后续须复验两个定向测试、零警告 vp check、完整 ready 和已初始化数据库的只读 Provider 烟测；不重新初始化数据库，不执行真实身份写入。
+
+### 2026-11-27 · PR #250 最终通过与原生 Docker 七服务候选
+
+维护者 Windows 已完成 PR #250 最终复验：中文注释 2/2、OIDC 身份 14/14、全新安装 28/28、CLI 4/4、82 个文件 966/966 单测、6 个文件 65/65 HTTP E2E；498 格式文件、339 受检零警告/Lint/类型错误，中文 365 个自有文件、文档 97 份，React/Vue/NestJS 构建通过。React 单个 chunk 591.62 kB 的构建体积警告暂保留。锁文件刷新与冻结安装已通过，移除 Prisma 7 三项直接依赖及 98 个包。真实 PostgreSQL 19 只读 FRESH_PROVIDER_SMOKE_READY，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，所有原生根模块及只读标志为 true，最终退出码 0、工作区干净。远端验收提交 dbab7c2a7ca3737e23fd451811aef92981378801，维护者明确授权，PR #250 已 Squash 合并至 feat/mvp-first-integration 的 94106b29b328833d944f35361004411b5a3ddab2。E-160 已关闭。
+
+协作环境 Node.js 22.16.0 对从当前远端原生 URL 解析函数提取的类型擦除片段及同等参数断言运行 node --test，2/2 通过（宿主两模式不变；容器允许路径及九种非法配置拒绝）。从远端启动编排和测试文件提取新增/调整的四个模拟编排用例，在 V8 隔离环境以基础等价断言执行，4/4 通过（启动顺序及秘密仅标准输入、数据库失败不启动本次应用、烟测失败不报告成功、基础设施入口独立）。这不是完整仓库 Node/Vitest 测试或真实 Docker 验收。Docker、pnpm、Vite+ 及固定依赖在协作容器不可用，Git 网络 DNS 不可达；Windows 增量测试、完整构建和实际七容器启动待验收。
+
+本批完整 Docker 专项预计 18/18、全新安装专项 29/29、数据库配置保护 8/8；真实 Linux 容器隔离构建、PID 1 SIGTERM 与已初始化库七服务启动待 Windows 实测。真实 OIDC 登录、授权业务写入、生产部署仍未验收。
+
+### 2026-11-27 · PR #251 真实验收及 Docker HTTPS 候选验证
+
+PR #251 维护者 Windows：Docker 18/18、数据库配置 8/8、全新原生 29/29，合计 55/55；Vite+ 499 格式/340 受检零警告错误、中文文案 366 文件、文档 97 份、NestJS 构建、真实 Linux 镜像隔离、PID 1 SIGTERM、七服务启动及 PostgreSQL 19 原生只读烟测均通过，两次验收退出码 0。远端最终格式提交 46de15eb15210e97f4195c80c61a211184807c08 经核对与明确授权 Squash 合并 71585ee998f6f6e72bf8042e231165128d7a9a76；维护者随后同步该 SHA，七服务运行、Vite+ 340 受检零警告错误、工作区干净。
+
+本批实际局部验证：Node.js 22.16.0 使用临时自签根及回环 IP SAN 叶证书，执行候选探针的真实 TLS 六项检查（固定六 GET 路径及流关闭、错误 CA、重定向、冲突缓存指令、受保护路由意外开放、非法端口），六项通过。真实 Nginx 隔离夹具从 Git Blob 4589ca30a08346a9217183cb35bd2cad0397a967 模板仅替换容器地址/端口、证书及静态目录路径，语法检查、HTTPS 六路由和原 HTTP 保持三项通过。真实上游与代理重复 no-store 的初次失败已复现并修复（E-161）；修复后 Node 与 Nginx 复验均通过，探针 Blob 471574addbead49c7c467b1616ce34e3b0548d3b 与实测源码一致。从远端启动编排及测试提取 8 项实际断言在 V8 隔离环境模拟文件读取、Docker/数据库/TLS 子进程，8/8 通过，未运行完整 node:test 22 项。协作环境没有 Docker Desktop、固定 pnpm/Vite+ 和实际项目依赖，真实 Windows Docker 镜像、Compose 端口绑定、现有 mkcert CA、双端浏览器渲染及完整质量链均待维护者验证。未启动真实 Keycloak 登录、不进行数据库写入。
+
+### 2026-11-27 · PR #252 真实验收与 Keycloak Discovery/JWKS 候选
+
+维护者 Windows 在候选 HEAD 3e677cd2dca74b0d621cb8bed029018f8b5e62a0 实测 Docker 22/22、环境和 LF、中文文案 367 文件、Markdown 97 份、Vite+ 500 格式/341 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP 及宿主 HTTPS 探针均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 56f48c2f81e9df95f9d97253098abef300ea665d 已推送，远端三文件差异仅 Markdown 围栏及 JavaScript 排版，无业务变化；无审查阻塞或额外远端 CI 记录。经维护者明确授权 PR #252 Squash 合入 feat/mvp-first-integration 的 b1218c0fd290344cf152500b4105e24ee9b29745。E-161 已关闭。日志未包含双端真实浏览器渲染证据，不将其视为浏览器或登录验收。
+
+本批协作环境 Node.js 22.16.0 实际运行与远端 Blob 字节一致的独立探针、宿主报告对照模块和离线测试（核心 bcd4a4637a775ffcb213324d6b2a75220198d939、宿主 5010374d7bbfd2aa509e920ddafe7ae32a94ab39、测试 58d5c3856605983f42086a9b36f18b33226c50db）：10/10 Node 内置测试通过，实际 RSA 2048/1024 密钥只在内存临时生成，验证元数据与签名公钥一致性、错误 Host/IP、输入、脱敏机器退出码；既有 mkcert CA 读取函数在局部测试使用注入替身。独立 OpenSSL 临时 CA 及 IP SAN 叶证书的实际 Node HTTPS 夹具七项通过（正确 CA、错误 CA、正确 CA 错误 IP SAN、302、超大响应、非法 JSON、元数据外部 JWKS 地址），未使用真实 IdP；无密钥进入 Git。三份代码 Node 语法检查与 TypeScript 5.8.3 allowJs/checkJs/noEmit 局部检查通过，不等于项目 TypeScript 6/Vite+。真实中文检查器 Blob 3b0b0a862ca3b15018d8fbd04cbb8f1eceb99cd9 局部复现 19 处机器码误识别，修复后 10 文件通过并再次运行 17/17 Node/TLS 测试。新增 E-162。远端实际编排与配置测试提取三项在 V8 隔离环境以固定模拟文件/子进程验证 3/3；并核对既有 ready 只包含离线 test:docker，未注册真实探针。协作环境无 Docker Desktop、pnpm/Vite+ 或完整仓库依赖，尚未执行 Windows test:docker 35 项、全仓检查、新镜像启动、真实 Keycloak 双视角或登录；未访问用户数据库或写入资源。
+
+### 2026-11-27 · PR #253 真实验收与正式 OIDC Docker 传输候选
+
+维护者 Windows 在候选 HEAD f75b7e6fd06f7031b475b62be7b30b0b8f0e8a05 实测 Docker 35/35（编排 25、Keycloak 探针 10），环境/LF、中文文案 370 文件、Markdown 97 份、Vite+ 503 格式/344 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP/HTTPS 及真实宿主与容器 Keycloak Discovery/JWKS 一致性均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 b74a3fe6b8ac5e2d1b2d4da9dfb2524d4375799d 已核对五文件仅排版；经维护者授权 PR #253 Squash 合入 feat/mvp-first-integration 的 b5378e263962d25883894e3416038472f845f1cb。E-162 已关闭。尚无正式授权码兑换、ID Token 验签或登录会话实测证据。
+
+协作环境 Node.js 22.16.0：适配器与六项离线测试 Git Blob f504d387e3bf924d4fd8676901758cad2cfc4a61 / d54227b47f5d5c11af164d08af4d82c8de92fd44，远端回读与本地相同。node --experimental-strip-types --test 六项通过。使用临时自签根、独立错误根与 IP SAN/DNS SAN 叶证书，在真实回环 HTTPS 服务上复用实际 exchangeDockerOidc（测试仅替换物理连接地址、保留公开 Host 和证书身份规则），正确 TLS、错误 CA、错误 SAN、重定向、超限响应、响应期间取消、POST 表单及 401 错误状态七项通过。合计 13/13。TypeScript 5.8.3 strict/noEmit 局部检查使用上游固定 6.9.1 CustomFetch/CustomFetchOptions/FetchBody 的最小声明及本地 Node 类型，通过；九份变更 TS/MJS 按仓库中文扫描规则静态复核无命中。不是完整项目 TypeScript 6、Vite+ 或实际 openid-client 运行。Git 网络 DNS 不可用、协作环境无 pnpm/vp、未取得完整项目依赖，故完整 test:docker（预计 41 项）、Discovery/回调 SDK 回归、正式构建、新容器真实 Discovery/JWKS、真实登录与写事务仍待维护者 Windows 验收。仅向临时测试 HTTPS 服务发送合成授权码与 Basic 夹具，未对用户 Keycloak 发送 POST、未读取真实凭据或访问数据库。E-163 为源码核实缺口，待真实 SDK 回归。
+
+### 2026-11-27 · PR #254 验收与 Docker 常驻原生只读数据库连接候选
+
+维护者 Windows 实测 PR #254：Docker 编排/只读探针/传输 41/41，Discovery 9/9（含真实 SDK 合法及错误 RSA 签名），Callback 12/12，共 62/62；Vite+ 505 格式文件/346 受检零警告错误、中文文案 372、Markdown 97、NestJS 构建及 git diff --check 通过，增量退出码 0。四镜像构建、七服务、容器原生只读、双端 HTTP/HTTPS、宿主与容器正式 OIDC Discovery/JWKS 通过，真实验收退出码 0。验收起点 d4494ef95e7b8c2aa0af799cfe0b9f68cfdbb20c，Hook 格式化提交 8f517321f2f4d2b10f85e960438f9b6db18f0821 经远端逐文件核对仅排版，无语义变更；维护者明确授权 Squash 合入 feat/mvp-first-integration 的 88024689f43419a01f9008b047643181498b853c。E-163 SDK 验签回归关闭，不代表真实 Keycloak 授权码、登录或写事务已验收。
+
+协作环境 Node 22.16.0 使用真实临时目录、原 Prisma8 运行时 URL 边界执行新增绑定专项 7/7：默认模式、冲突拒绝、固定容器 URL、错误凭据/标记/集群/额外字段、首次创建与原文件不覆盖、漂移拒绝及目录冒充文件。新增配置/宿主绑定/专项 Git Blob 分别为 241afd5f65d5a949f0b36a21c770d33bb59dd027、eac4d4a342626ff185a041fbaae3afae7be27d8e、c5450868c06c3a869a4ab9b902d811e979853207，远端与局部实测一致；原运行时边界只修改注释。TypeScript 5.8.3 strict/noEmit 局部检查通过，非完整仓库类型检查。V8 隔离执行远端编排和测试的实际同步逻辑，以模拟 Docker/本地文件接口执行 25/25，原有 Prisma URL 解析一项因无 WHATWG URL 跳过；其中首次绑定准备顺序、绑定失败停止、常驻报告缺失拒绝均通过。使用远端中文扫描器实际逐行规则检查 17 个变更自有代码或配置文件，零失败且 LF。新增 5 项常驻根模块 HTTP E2E、默认根模块 1 项隔离回归均尚未在真实 Nest/Vite+ 执行。完整 test:docker 预计 49 项（26+10+6+7），全量服务端 E2E、实际 TypeScript 6、Vite+、Windows Docker Desktop 单文件绑定的非 root 可读性、真实数据库常驻连接及现有 OIDC 双视角回归尚待实机验收。本批未访问或写入实际数据库，不修改卷或根 .env，不启动认证或工程 API。
+
+### 2026-11-27 · PR #255 常驻数据库真实验收与 E-164 候选修复
+
+维护者 Windows 在 de8dc9e07e2fe265658984b7cf6c662830b89db9 实测 NestJS 构建与类型检查、Docker 49/49（四套件）、HTTP E2E 7 文件/71 项（常驻模块 5/5、默认根模块 13/13）、环境与 LF、中文文案 377 文件、Markdown 97 份、git diff --check 均通过。Vite+ 510 文件格式正确、351 受检文件 1 条 vitest(expect-expect) 警告、0 错误，增量退出码 0，但零警告门禁未通过。四镜像构建、七服务启动、常驻 NestJS Prisma8Service 原生严格只读连接、独立容器原生只读、双端 HTTP/HTTPS 以及宿主与容器正式 OIDC Discovery/JWKS 全部通过，真实验收退出码 0。维护者格式化提交 bf7b408883d6a427dac4e3e7d986edef827b6c79 的十文件差异核实仅排版及 Markdown 围栏修复。
+
+E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据库接口隔离回归，保留原 Supertest 404 校验并增加 Vitest 显式状态断言；修复提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd。远端回读仅预期修改，隔离模拟实际测试体的 404/200/503 状态行为 3/3，通过不等于真实 E2E 或 Lint。完整 Vite+ 与 HTTP E2E 未在协作环境运行，待维护者增量复验零警告并通过后按授权合并。此次只修改测试与文档，无业务代码、容器配置、数据库、认证或依赖变化，已通过的真实 Docker 验收证据保留，无需重新构建镜像。
+
+### 2026-11-27 · PR #255 结案与容器原生临时事务候选
+
+维护者 Windows 在 HEAD e7be1b522cf66e507ab7e2af5d83e61d51cb98b6 复验 HTTP E2E 7 文件/71 项、Vite+ 510 格式文件/351 受检零警告、Lint、类型错误、Markdown 97、git diff --check，退出码 0、工作区干净；前一轮 Docker 49/49 与真实七服务、常驻原生严格只读连接、双端 HTTP/HTTPS、正式 OIDC Discovery/JWKS 验收有效。维护者明确同意后 PR #255 Squash 合入 feat/mvp-first-integration 的 1870937aa0c2d77103c06a55f219491a1c87dd34，E-164 关闭。未取得额外远端 CI 运行记录。
+
+本批 Node.js 22.16.0 使用实际 node --experimental-strip-types --test 执行新增脚本 8/8，通过。四份本地文件与远端 Git Blob 一致：探针核心 63f238364b3be7cf4cfc55de720b6556e6207d03、测试 2d1c5e994582ec58ac20f9bd8e81e143ad6e5477、绑定配置 365e5a13c2d034e1fdbfbc9c870f7acf800829ea、运行时边界 7f25a15bbaad4ac7599a94119e221a72d2aa0b77。覆盖精确确认、固定地址和集群、模式隔离、提交与回滚模拟回读、不同后端会话、影响行数和清理失败。使用远端宿主编排 a86b1dfc5686c154cd841342d6b656c604d59085、测试 5e5175e5197c64829098d842faf5e5d93e7353ce 的实际相关函数和三个新增测试在隔离 V8 执行，注入断言、空进程环境、模拟 Docker 和数据库验证，3/3 通过；初次摘取未移除 export、随后缺少 process，修正夹具后通过，非项目源码故障。未运行完整 60 项 Docker 专项、真实 SDK、NestJS 构建、Vite+ 或 Docker Desktop，协作环境没有完整依赖或 Docker，GitHub DNS 不可达。真实临时表执行单独授权，尚未执行任何数据库 DDL/DML。常驻只读服务及 OIDC 开关不变。
+
+### 2026-11-27 · PR #256 E-165 最小修复候选
+
+维护者 Windows 类型检查与原生契约离线生成成功，存储指纹保持 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释。Docker 实测 59/60，临时事务 8/8；宿主编排第三项错误断言失败，增量退出码 1，后续未执行。E-165 仅修正 Node 原生异常匹配方式，同一测试三个预期改为精确 name/message 对象。协作容器 Node.js 22.16.0 原生断言局部复现旧版失败退出 1，修复后三组诊断及额外负例两项测试全部通过退出 0。测试提交 ea109ccdead21c08bbd7b504873c388637a44113，远端 Blob a9136d9c7df17d9fec5ac3c9454aae2e221cf158，修复测试循环 FNV-1a bebd0a69 与实际本地片段一致。上轮自定义 V8 断言没有模拟 Error 字符串表示，是此次漏检原因。未执行全量 60 项、HTTP E2E、Vite+ 或真实 Docker；无生产源码、依赖及数据库变更。PR 保持 Draft，待维护者完整复验；临时表 DDL/DML 仍需独立确认。
+
+### 2026-11-27 · PR #256 增量复验与真实 Docker 常驻只读回归
+
+维护者 Windows 于 2026-11-27 在 HEAD 47b84f8e2ece8cffebe931013b1cca865dc3cc41 完成两轮增量验收，均退出 0；Core 编译、Prisma 8 原生契约离线生成（databaseAccessed=false）、NestJS 类型检查、Docker 五套件 60/60（独立临时事务模拟 8/8）、HTTP E2E 七文件 71/71、环境及 LF、中文文案 380 文件、Markdown 97 份、Vite+ 513 格式文件/354 受检文件零警告、Lint、类型错误及 git diff --check 均通过。首次增量后工作区干净。存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释保持一致。
+
+同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 维护者格式化提交 47b84f8e2ece8cffebe931013b1cca865dc3cc41 与此前候选 83ba2f3ba6585691f0f08696e230f2d1de637c73 的五文件差异已逐项核对，仅为排版，E-165 关闭。
+
+下一项仅为本机已运行的固定 server 容器独立临时事务验收。已有入口为 `pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe`，须由维护者明确确认后在本机执行，严格复核当前数据库、集群、契约和常驻绑定后，仅操作 `pg_temp.adui_scada_native_tx_probe`。宿主成功必须同时校验内部状态 DOCKER_NATIVE_TRANSACTION_READY、提交、回滚、同一后端、临时表移除及 Provider 关闭均为 true，businessDataWritten 为 false。失败返回非零并保留现场，不自动重试、初始化、迁移、清理容器或卷。成功后再核对常驻只读回归、OIDC 未启用及服务状态。当前仅记录维护者提供的实测日志，协作环境未执行新的 Docker 或数据库操作；PR #256 保持 Draft，真实事务和合并仍待验收。
+
+### 2026-11-28 · PR #256 容器原生临时事务真实验收
+
+维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
+
+结合前一轮 60/60 Docker 专项、71/71 HTTP E2E、Vite+ 零警告及真实镜像构建和常驻只读回归，独立原生临时事务专项已通过。维护者明确同意继续合并；新增记录仅为文档，未在协作环境重新执行全仓文档检查。真实正式业务连接及登录、工程读写仍须单独评审和验收。
+
+### 2026-11-28 · PR #257 双库角色只读核查候选
+
+协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。
+
+局部 8 项使用原生 node:test 与 node:assert/strict，验证共享超级用户及模拟权限收窄均不能获得正式准入、固定双库前后只读身份、缺失表/权限/标记、身份漂移、两库角色摘要不一致、独立连接及关闭失败、异常脱敏和 Keycloak 对象名不输出。PostgreSQL 19 的访问权限查询函数（has_*_privilege、pg_has_role 的 USAGE/SET、acldefault/aclexplode）已核对[官方文档](https://www.postgresql.org/docs/19/functions-info.html)，但未在真实数据库执行新增 SQL，不声称 SQL 或角色权限实机验收通过。
+
+Windows 增量：`pnpm run test:docker`（预计 68 项）、`pnpm run test:prisma8:fresh`、`pnpm run env:check`、`pnpm run messages:check`、`pnpm run docs:check`、`vp check --fix`、`vp check` 和 `git diff --check`；然后单独执行 `pnpm run docker:db:role:review`。预期固定状态 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出 0；真实角色属性、权限数值和 Keycloak 对象数以输出为准。失败保留现场，不自动更改权限或重试。真实核查无需重建镜像，不改变常驻只读模式；B 阶段尚未授权，不执行任何角色创建、GRANT、REVOKE 或数据库写入。
+
+### 2026-11-28 · PR #257 Windows 增量验收通过，真实双库目录待验收
+
+维护者 Windows 实测 Docker 六套件 68/68（新增角色核查 8/8）、Prisma 8 全新专项 29/29，合计 97/97；环境及 LF、中文文案 382 文件、Markdown 98 份、Vite+ 516 格式文件与 356 受检文件零警告、Lint 错误及类型错误、git diff --check 均通过，增量验收退出码 0。格式化提交 8777837592c5bc0e81dae102608616f8d9922e17 已推送；相较候选 e821d861754106c378b000e4715a3d761762ea7c 的四文件差异已逐项核对，只有排版及测试对象展开中等价的冗余空对象回退清理，不改变数据库核查语义。
+
+日志尚未包含 `pnpm run docker:db:role:review` 的实际 JSON 报告或退出码，因此不得将模拟测试成功认定为 PostgreSQL 19 目录、共享角色权限或正式运行身份验收。新增记录仅为文档，未重新运行本次文档检查。下一步单独执行现有只读核查命令并提供完整脱敏报告及退出码；无需重建镜像或重复已经通过的 97 项测试。真实核查通过前保留 PR #257 Draft，不合并、不推进角色或权限变更。
+
+### 2026-11-28 · PR #257 真实双库角色目录核查通过
+
+维护者 2026-11-28 Windows 日志显示从 8777837592c5bc0e81dae102608616f8d9922e17 快进至 21f574036cf02178ae48d3e6664ad983b0b32b6b；docs:check 98 份 Markdown 通过；docker:db:role:review 返回 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出码 0，git status --short 无输出。真实 PostgreSQL 19.0（190000），存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释均一致。共享 adui_scada 角色为登录超级用户，CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS、INHERIT 均 true，四类成员计数均 0，两个拟议独立运行角色不存在。两库当前角色直接拥有数据库且 CONNECT/CREATE/TEMP、PUBLIC CONNECT 均 true。两库 public Schema 的 owner=false、ownerPrivileges/USAGE/CREATE=true、PUBLIC CREATE=false；业务库 prisma_contract 直接拥有且可 USAGE/CREATE。两库额外非系统 Schema 均为 0、public 序列均为 0；SCADA 12/12、Keycloak 101/101 public 表均直接拥有且报告所列有效表与列权限全部存在；业务 marker SELECT 与 pg_control_system EXECUTE 均 true。
+
+结合此前 Windows 97/97 自动化测试、环境/LF/中文文案/Markdown、Vite+ 零警告零错误和差异检查通过，A 阶段验收完成。维护者已同意继续合并。目录摘要不证明实际运行角色的精确授权、逐列 ACL、全部对象所有权或跨库拒绝；B 阶段按当前原生仓储真实需求和 Keycloak 对象管理需要另行评审，不直接修改角色、密码、所有权或 PUBLIC 权限。此次追加文档未重新执行全仓检查。
+
+### 2026-11-28 · B1 固定角色准备预览候选
+
+维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 协作环境 Node.js 22.16.0 实际 `node --check` 两文件及 `node --test` 5/5 通过，远端 Git Blob 与实测文件一致（核心 937c3594940f0d18513bb39453f4ba4a724bffef、测试 96bf64fc0ebb58387b7329af3fecdac4ffa2943b）。使用维护者真实 A 阶段完整 JSON 离线调用纯函数通过，8 条 SQL、planOnly=true、admissionPassed=false、databaseWritten=false；未连接数据库或执行 SQL。全仓 Docker 预计 73 项、原生专项预计 29 项、env/messages/docs、Vite+ 零警告错误、git diff --check 及实际 `pnpm run docker:db:role:plan` 待 Windows 复验，不声称真实预览已运行。详见 [角色准备预览](plans/docker-native-role-bootstrap-plan.md)。
+
+### 2026-11-28 · PR #258 Windows 增量及真实角色准备预览通过
+
+维护者 2026-11-28 Windows 增量：Docker 七套件 73/73、Prisma 8 全新专项 29/29，合计 102/102；环境及 LF、中文文案 384 文件、Markdown 99 份、Vite+ 519 格式文件/358 受检文件零警告、Lint/类型错误、git diff --check 全部通过，退出码 0。维护者格式化提交 76bfcb156d82d151ab56e667dbd9f13628c753ba 已推送；相较 b15e400d68d4a9428f2a1fc12f512f42b41cd856 的两文件差异已核对仅为排版。随后实际 docker:db:role:plan 返回 DOCKER_DB_ROLE_BOOTSTRAP_PLAN_READY、directoryReviewPassed=true、planOnly=true、admissionPassed=false、databaseWritten=false、serviceSwitched=false，PG19.0、目标 adui_scada、固定指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、八条 SQL 及五个待审批门禁完全符合预期，退出 0。未执行 SQL 预览；真实预览日志未再次打印 HEAD 或工作区状态。
+
+B1 验收通过，维护者同意继续合并与 B2 受控执行器开发；本次授权不自动执行实际角色变更。新增验收文档尚未重新执行全仓检查。下一批仅候选创建两个不可登录、无密码、无管理权限的角色及固定启动读权；必须独立显式确认、事务内重验基线、有效权限和精确 ACL，禁止变更 PUBLIC、服务身份、业务数据或发布安全门禁。
+
+### 2026-11-28 · B2 独立运行角色事务候选
+
+PR #258 已合并至 `569bc45c2162eda28d8161011455d5810e6804fc`。B2 候选实现复用 B1 八条固定 SQL，在独立 SERIALIZABLE READ WRITE 事务中获取固定事务级 advisory lock，前后重验同一业务库目录、集群、会话身份及读写模式。仅允许两个既定 NOLOGIN/NOSUPERUSER/无密码角色及原预览启动读权；验证角色属性、成员和配置不存在、无非预期所有权/跨库依赖、十项直接 ACL（包含五个列权限）、有效表/列/序列/Schema/数据库 CREATE 边界，并以 SET LOCAL ROLE 执行固定启动读取探针，再恢复管理身份。明确保留 PUBLIC CONNECT，两个候选角色仍可获得跨库有效 CONNECT，尚未完成隔离或正式 LOGIN 准入；Keycloak 对象所有权、完整权限及业务写入授权仍待专项。事务演练执行真实目录 DDL 和 GRANT 但 ROLLBACK，随后重新严格结构、注释与双库只读核查确认两角色不存在；独立创建模式只有精确确认参数才可 COMMIT，提交后重验相同基线和实际角色属性/ACL。提交结果未知、关闭失败、后置失败均拒绝成功，不自动重试、删除角色、清理容器或卷。没有业务 DML、现有角色密码或服务绑定修改；不启用 OIDC、发布或正式运行身份。事务级锁仅协调同一执行器，不替代对外部并发管理员变更的控制；实际操作前禁止并发权限维护。
+
+本次协作环境 Node.js 22.16.0 对新增执行核心及测试文件执行 node --check 和 node --test，8/8 通过；实际执行文件 Git Blob 核心 6435e52a8a998070921ca3ce16f8f35eee45276e、测试 b91cf3685dd6085e469b3f96e49b24a9a9520aad 与远端回读一致。新增两项事务内目录核查测试及扩展 CLI 参数断言、完整 Docker 专项预计 83 项、Prisma 8 全新专项预计 29 项、env/messages/docs、Vite+、真实 PG19 SQL 与演练均待维护者 Windows 复验；未连接数据库或执行 SQL。
+
+Windows 先完成增量质量链；再单独执行 `pnpm run docker:db:role:bootstrap --confirm-rehearse-docker-roles` 和 `pnpm run docker:db:role:bootstrap:status`。演练预期事务回滚、目录未提交、两角色不存在、后置严格核查通过；状态报告应确认两角色均不存在。以上是验收预期而非实测结果。禁止在本轮执行正式角色创建确认参数。
+
+### 2026-11-28 · PR #259 Windows 增量通过，真实演练失败及 E-166 诊断修复
+
+维护者 Windows 实测 PR #259：Docker 83/83（角色事务 8/8、事务内目录 2/2），Prisma 8 全新专项 29/29，共 112/112；环境/LF、中文 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告/Lint/类型错误、git diff --check 均通过，增量退出码 0。维护者已推送格式化提交 6426a35570f6fd71d5b3baedc5eef44004da2b67，相较 1f009bd683dc28263a6501837e9a02b1e2a5d4f3 的四文件差异已核对为排版。真实 `docker:db:role:bootstrap --confirm-rehearse-docker-roles` 进入角色属性、精确授权及有效权限核验阶段后失败，退出码 1；&& 短路导致独立状态核查未执行。未获得具体 SQLSTATE、断言差异及独立角色状态；不据此宣称数据库层根因已定位或真实演练通过。
+
+最小诊断修复：仅修改 `scripts/docker-db-role-bootstrap.mjs` 及对应 Node 测试。对角色属性、直接 ACL、有效对象权限、有效列权限、切换运行角色、运行角色身份及标记、启动工程读取、恢复管理身份八个固定步骤分别脱敏；仅允许 PostgreSQL 官方白名单 SQLSTATE（未知为 UNKNOWN），精确匹配失败仅报告预期/实际行数、未匹配的固定预期项序号和预期字段名，不回显实际目录名、值、连接串、凭据、SQL 原文或第三方错误正文。失败路径只有收到 ROLLBACK 命令标签才补充回滚确认，回滚未知及提交未知仍拒绝成功、禁止自动重试。原八条 SQL、所有权限白名单、精确匹配条件、确认参数、Compose、业务数据和正式准入均不变；真实根因尚待新诊断证据。
+
+协作环境 Node.js 22.16.0 从格式化前已有 Git Blob 精确本地副本应用同一诊断修复，真实 `node --check` 两文件及 `node --test` 10/10 通过（原八项加两项参数化诊断回归，涵盖 12 类故障）。远端使用相同修改保留维护者的既有格式化，新增诊断核心块 3107 个字符/FNV-1a 202e8a23、两个新增测试块 1927 个字符/FNV-1a c8a5594f 与本地实测逐字校验一致；远端两个文件全文回读一致，但本地测试文件整体 Blob 仍与远端存在既有排版差别，不冒称完整最新远端字节实测。核心修复提交 adb3d4d70fe0164e26bb76a2f46be6fde358f4f8、测试提交 edbc67493bef64b7438d6bb3838d7a2ed87b72af。完整 Windows Vite+、中文/文档、Docker 预计 85 项与真实 PostgreSQL 演练未执行。
+
+先单独执行 `pnpm run docker:db:role:bootstrap:status` 并检查退出码 0、`rolesPrepared=false`；若已存在角色、状态不一致或失败，停止并保留现场，不删除、不回收权限、不执行创建。再完成定向测试与全仓增量质量复验，只有只读状态明确确认两个角色不存在且质量门禁通过后，才单独重新执行已明确确认的回滚演练；如仍失败，只提供新脱敏诊断，不执行正式创建或反复重试。PR #259 保持 Draft。
+
+### 2026-11-28 · PR #259 E-166 诊断复验通过，E-167 对象类型修复待实机验收
+
+维护者 2026-11-28 Windows 于 096f5962c8126646773062ad8f0faf33c746bf7e 实测：演练前角色只读状态退出 0、rolesPrepared=false；Docker 85/85（角色事务 10/10）、Prisma 8 全新专项 29/29，合计 114/114；环境及 LF、中文 386 文件、Markdown 99 份、Vite+ 521 格式文件/360 受检文件零警告、Lint/类型错误及 git diff --check 全通过，增量退出 0。真实演练进入有效对象权限查询后返回 SQLSTATE=42809，并明确报告事务已确认回滚，退出 1；演练后独立只读状态退出 0，rolesPrepared=false、admissionPassed=false、databaseWritten=false、publicConnectRetained=true，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436 不变。维护者随后推送 195194ec103c846b995f3e0a1e8692ec31b3d870，两文件差异核对仅为格式化。E-166 的脱敏分阶段诊断及失败回滚确认已获真实证据，诊断缺陷关闭，但 B2 演练仍未通过。
+
+SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、索引等多种 relkind 的 pg_class 查询混合关系目录，却依赖 AND/OR 中 relkind 过滤保护类型专用权限函数。依据 PostgreSQL 19 [表达式求值规则](https://www.postgresql.org/docs/19/sql-expressions.html) 与 [访问权限查询函数](https://www.postgresql.org/docs/19/functions-info.html)，优化器可调整布尔表达式求值顺序；官方源码 acl.c 的 has_sequence_privilege_id_id 对非序列 OID 抛出 ERRCODE_WRONG_OBJECT_TYPE。已确认存在该查询缺陷，与实测阶段及错误码一致，但尚无数据库原始错误正文或执行计划来确认具体先执行了哪个函数。最小修复在 effectiveSql 与 effectiveColumnsSql 的表/列、序列及列 SELECT 三处使用 CASE WHEN relkind ... THEN 对应权限函数 ELSE false END，确保仅对适用对象调用函数。保持原关系类型、Schema、权限集合、八条角色准备 SQL、十项直接 ACL、五项列权限及所有精确证据断言不变；不吞掉 42809，不增加授权，不改角色属性、业务数据、Compose、PUBLIC 或服务绑定。
+
+协作环境 Node.js 22.16.0 对包含相同修复的已有本地副本执行两文件 node --check 及真实 node:test，11/11 通过；新增用例检查实际传入查询函数的三个 CASE 保护结构，既有参数化负例新增 noSequencePrivileges=false，仍拒绝并确认回滚。将新增测试与未修复查询组合执行，定向旧 SQL 回归按预期 ERR_ASSERTION、退出 1；修复后退出 0。两处 SQL 替换及新增测试块 FNV-1a 分别为 a562a4a6、4a8f5f71、2b7bcccf，与远端新增块逐字节校验摘要一致；本地副本未包含此前全部排版调整，不声称最新远端整体 Blob 已在 Node 实测。远端修复核心提交 324881c3cb36eefdb35345551fb169dc224a872f、测试提交 e28f9fcdaeeac7e7dd053e8a3ef22db6b0cdf8fd，两个文件回读一致。协作环境没有 PostgreSQL/Docker，网络也无法安装依赖，未执行实际 PG 查询；新增离线测试只验证 SQL 结构和模拟负例，不代替真实执行计划或权限语义。
+
+先同步代码并单独运行 docker:db:role:bootstrap:status，确认退出 0、rolesPrepared=false；再运行 test:docker（预计 86 项）、test:prisma8:fresh（29 项）、env/messages/docs、Vite+ 零警告、git diff --check。仅在质量检查及只读状态通过后，独立执行 docker:db:role:bootstrap --confirm-rehearse-docker-roles，确认真实混合目录查询和完整角色演练通过；无论结果如何，再独立运行 docker:db:role:bootstrap:status，确认角色仍不存在。失败保留现场，提供固定脱敏诊断；不执行正式创建，不自动重试、清理或调整权限。PR #259 保持 Draft。
+
+### 2026-11-28 · PR #259 E-167 真实回滚演练通过
+
+维护者 2026-11-28 Windows 于 HEAD b67c230a140d79664620962805fecffd2e18c1be 实测：演练前独立角色状态核查退出 0、rolesPrepared=false；Docker 九套件 86/86（角色事务 11/11）、Prisma 8 全新专项 29/29，合计 115/115；环境及 LF、中文文案 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告、Lint 和类型错误、git diff --check 均通过，退出 0，工作区干净。随后真实 PostgreSQL 19.0 回滚演练返回 DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED、catalogStatementsExecuted=true、rolledBack=true、committed=false、rolesPrepared=false、directoryReviewPassed=true、postVerificationPassed=true、admissionPassed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、publicConnectRetained=true，退出 0；演练后独立状态核查返回 DOCKER_DB_ROLE_BOOTSTRAP_STATUS_READY、rolesPrepared=false，退出 0。存储指纹始终为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436。E-167 对象类型保护修复通过真实完整演练，关闭；无需再次改动已验收 SQL。
+
+下一步为维护者独立执行正式创建验收，先同步仅追加文档的候选、检查工作区干净、文档检查及只读状态，确认 rolesPrepared=false、退出 0；确认本机固定 Docker 集群及无并发数据库权限维护后，使用已存在的精确确认命令 `pnpm run docker:db:role:bootstrap --confirm-create-docker-roles`。该命令会持久化两个 NOLOGIN、无密码、无管理权限角色及原八条固定语句对应的十项直接 ACL，不修改现有角色、业务行、PUBLIC CONNECT、Compose、服务凭据、OIDC 或发布门禁。只有返回 DOCKER_DB_ROLE_BOOTSTRAP_CREATED、rolesPrepared=true、committed=true、rolledBack=false、catalogStatementsExecuted=true、directoryReviewPassed=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false、admissionPassed=false、serviceSwitched=false、publicConnectRetained=true、退出 0，并独立状态核查 rolesPrepared=true、原生指纹不变及既有 OIDC 只读和七服务状态回归通过，才完成 B2 持久化验收。无论创建结果如何都独立核查状态；失败或提交结果未知时禁止重试、手动删除或调整授权，保留现场。当前协作环境仅同步文档，不操作维护者数据库；未重新执行新增文档后的全仓检查。PR #259 保持 Draft 至真实持久化验收及维护者明确合并授权。B3 全集群 PUBLIC/跨库隔离及 B4 正式业务 ACL、Keycloak 所有权均不提前实施。
+
+### 2026-11-28 · B2 正式角色持久化验收完成
+
+维护者 Windows 于 `cb45fdaede179f82ec4c7f93e67f0ae9295abc87` 实测：99 份 Markdown 通过；前置状态 rolesPrepared=false，正式创建 committed=true、rolesPrepared=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false，退出 0；独立状态 rolesPrepared=true、退出 0；存储指纹保持一致，OIDC Discovery/JWKS 只读探针、七容器状态及 git diff --check 通过，工作区干净。PR #259 经维护者授权 Squash 合入集成分支 `2278e69b6cce9b163d3d9f0046e1de41bb5a77b8`。PUBLIC CONNECT 保留，正式准入、登录及服务切换未启用。
+
+B3 当前仅进入只读核查与预览设计，实际查询、测试和权限变更尚未实施；见角色准备设计文档。
+
+### 2026-11-28 · B3.1 全集群目录只读候选验证
+
+协作环境 Node.js 22.16.0 对 `scripts/docker-db-role-isolation.mjs` 和 `scripts/docker-db-role-isolation.cases.mjs` 运行 node --check，均退出 0；实际 node --test 专项 4/4，退出 0，覆盖六条固定 SELECT、未知及模板数据库、默认与显式空 ACL、遗漏 ACL 行、完整权限矩阵、角色引用、敏感名称/额外字段拒绝、未解析连接数量。最终本地 Git Blob 模块 d9ed5183ce8fcb51427b2eaaeb1c87c38f678b3d、测试 3fddcb2fad9fae0aa8bdd38ca6400a89f25fea69。协作环境无 pnpm、Vite+、PostgreSQL，GitHub 域名解析失败，无法克隆全仓；B2 三项新增集成测试与 CLI/环境门禁、全仓质量链和真实 PG19 未执行，不将模拟当成实际数据库结果。Windows 待验收 Docker 预计 93 项、Prisma 8 全新专项 29 项、env/messages/docs、Vite+ 零警告零错误、git diff --check；再独立运行 B2 状态及 B3.1 只读核查，要求角色准备完成、目录/事务回滚确认及所有变更许可为 false，消费者仍待人工评审。无数据库写入、服务切换、权限回收或 LOGIN 变更。
+
+### 2026-11-28 · B3.1 真实验收完成
+
+维护者 Windows 在 `4ba641356db84b4286fa58350efd98138b88af66` 实测 Docker 93/93、Prisma 8 全新专项 29/29、Vite+ 523 个格式文件/362 个受检文件零警告错误、中文 388、Markdown 99、环境及 LF 和 git diff --check，增量退出 0。正常 Hook 格式化提交 `b3c6e5c433d63025456765aa0c310796cd604f09` 已推送，五文件仅排版。真实 B2 状态及 B3.1 目录核查均退出 0，5 库、19 角色、25 ACL、95 有效权限、3 显式成员关系、两组共享管理身份连接各 2，未知数据库/登录角色/未解析会话均 0；确认回滚、存储指纹不变、七服务及 OIDC Discovery/JWKS 只读回归退出 0。PR #260 经明确授权 Squash 合入 `0c25d7477693e15abeea6bb094b880c3f0943ec6`；无额外远端 CI 状态记录。未执行 PUBLIC 权限回收或登录切换。
+
+### 2026-11-28 · B3.2 只读预览候选验证
+
+Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均退出 0，node --test 5/5、零跳过；覆盖精确权限基线、三组五条语句、8 条 PUBLIC 授权与 17 条直接 ACL、两个 NOLOGIN 运行角色预测、模板/默认 ACL、稳定指纹、十八种漂移/敏感字段拒绝及版本/存储/集群异常。维护者真实 B3.1 JSON 使用合成集群标识独立离线调用实际核心退出 0，输出 25/8/17、95 项和连接预测，非数据库执行或实际集群指纹。模块 Git Blob c3ea305c6472b91a740747c00c13d5818ea6aeea，测试 614258ff458215bd1680be1e56cb28050d759382。协作环境无 pnpm/vp/真实 PostgreSQL；Windows 完整 Docker 98、全新专项 29、环境、中文、文档、Vite+、真实 B3.2 预览及服务回归均待执行。预览成功不是权限撤销、登录、消费者识别或正式准入。
