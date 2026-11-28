@@ -5437,3 +5437,11 @@ Windows 增量：`pnpm run test:docker`（预计 68 项）、`pnpm run test:pris
 维护者 2026-11-28 Windows 增量：Docker 七套件 73/73、Prisma 8 全新专项 29/29，合计 102/102；环境及 LF、中文文案 384 文件、Markdown 99 份、Vite+ 519 格式文件/358 受检文件零警告、Lint/类型错误、git diff --check 全部通过，退出码 0。维护者格式化提交 76bfcb156d82d151ab56e667dbd9f13628c753ba 已推送；相较 b15e400d68d4a9428f2a1fc12f512f42b41cd856 的两文件差异已核对仅为排版。随后实际 docker:db:role:plan 返回 DOCKER_DB_ROLE_BOOTSTRAP_PLAN_READY、directoryReviewPassed=true、planOnly=true、admissionPassed=false、databaseWritten=false、serviceSwitched=false，PG19.0、目标 adui_scada、固定指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、八条 SQL 及五个待审批门禁完全符合预期，退出 0。未执行 SQL 预览；真实预览日志未再次打印 HEAD 或工作区状态。
 
 B1 验收通过，维护者同意继续合并与 B2 受控执行器开发；本次授权不自动执行实际角色变更。新增验收文档尚未重新执行全仓检查。下一批仅候选创建两个不可登录、无密码、无管理权限的角色及固定启动读权；必须独立显式确认、事务内重验基线、有效权限和精确 ACL，禁止变更 PUBLIC、服务身份、业务数据或发布安全门禁。
+
+### 2026-11-28 · B2 独立运行角色事务候选
+
+PR #258 已合并至 `569bc45c2162eda28d8161011455d5810e6804fc`。B2 候选实现复用 B1 八条固定 SQL，在独立 SERIALIZABLE READ WRITE 事务中获取固定事务级 advisory lock，前后重验同一业务库目录、集群、会话身份及读写模式。仅允许两个既定 NOLOGIN/NOSUPERUSER/无密码角色及原预览启动读权；验证角色属性、成员和配置不存在、无非预期所有权/跨库依赖、十项直接 ACL（包含五个列权限）、有效表/列/序列/Schema/数据库 CREATE 边界，并以 SET LOCAL ROLE 执行固定启动读取探针，再恢复管理身份。明确保留 PUBLIC CONNECT，两个候选角色仍可获得跨库有效 CONNECT，尚未完成隔离或正式 LOGIN 准入；Keycloak 对象所有权、完整权限及业务写入授权仍待专项。事务演练执行真实目录 DDL 和 GRANT 但 ROLLBACK，随后重新严格结构、注释与双库只读核查确认两角色不存在；独立创建模式只有精确确认参数才可 COMMIT，提交后重验相同基线和实际角色属性/ACL。提交结果未知、关闭失败、后置失败均拒绝成功，不自动重试、删除角色、清理容器或卷。没有业务 DML、现有角色密码或服务绑定修改；不启用 OIDC、发布或正式运行身份。事务级锁仅协调同一执行器，不替代对外部并发管理员变更的控制；实际操作前禁止并发权限维护。
+
+本次协作环境 Node.js 22.16.0 对新增执行核心及测试文件执行 node --check 和 node --test，8/8 通过；实际执行文件 Git Blob 核心 6435e52a8a998070921ca3ce16f8f35eee45276e、测试 b91cf3685dd6085e469b3f96e49b24a9a9520aad 与远端回读一致。新增两项事务内目录核查测试及扩展 CLI 参数断言、完整 Docker 专项预计 83 项、Prisma 8 全新专项预计 29 项、env/messages/docs、Vite+、真实 PG19 SQL 与演练均待维护者 Windows 复验；未连接数据库或执行 SQL。
+
+Windows 先完成增量质量链；再单独执行 `pnpm run docker:db:role:bootstrap --confirm-rehearse-docker-roles` 和 `pnpm run docker:db:role:bootstrap:status`。演练预期事务回滚、目录未提交、两角色不存在、后置严格核查通过；状态报告应确认两角色均不存在。以上是验收预期而非实测结果。禁止在本轮执行正式角色创建确认参数。
