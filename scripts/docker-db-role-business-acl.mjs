@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { buildScadaLockRoutinePreview } from "./docker-db-role-lock-routines.mjs";
 
 export class DockerBusinessAclPreviewError extends Error {}
 
@@ -166,6 +167,7 @@ export function buildScadaBusinessAclPreview(rows) {
     baselineSelectCount: startupColumns.length,
     grants,
     blockedOperations,
+    lockRoutinePreview: buildScadaLockRoutinePreview(),
     planFingerprint,
     planOnly: true,
     rowAuthorizationVerified: false,

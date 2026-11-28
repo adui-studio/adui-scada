@@ -85,6 +85,11 @@ void test("实际读取仅发送固定目录 SELECT，并保护类型专用权�
   assert.equal(calls, 1);
   assert.equal(report.rowLockVerified, false);
   assert.equal(report.rowAuthorizationVerified, false);
+  assert.equal(report.lockRoutinePreview.routineCount, 9);
+  assert.equal(report.lockRoutinePreview.ownerGrants.length, 13);
+  assert.equal(report.lockRoutinePreview.planOnly, true);
+  assert.equal(report.lockRoutinePreview.admissionPassed, false);
+  assert.match(report.lockRoutinePreview.planFingerprint, /^[a-f0-9]{64}$/u);
 });
 
 void test("缺行、重复、额外列、未知角色及任一权限漂移均拒绝且不回显目录值", () => {

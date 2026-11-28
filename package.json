@@ -52,7 +52,7 @@
     "test:oidc:proxy": "node --test scripts/oidc-https-dev-proxy.cases.mjs",
     "test:oidc:lab": "node --test scripts/prepare-oidc-lab.cases.mjs",
     "test:oidc:identity": "node --test scripts/oidc-lab-identity.cases.mjs",
-    "test:docker": "node --test scripts/docker-stack.cases.mjs scripts/docker-oidc-discovery.cases.mjs scripts/docker-oidc-transport.cases.mjs scripts/docker-runtime-binding.cases.mjs scripts/docker-native-transaction-probe.cases.mjs scripts/docker-db-role-review.cases.mjs scripts/docker-db-role-bootstrap-plan.cases.mjs scripts/docker-db-role-bootstrap.cases.mjs scripts/docker-db-role-isolation.cases.mjs scripts/docker-db-role-isolation-plan.cases.mjs scripts/docker-db-role-object-review.cases.mjs scripts/docker-db-role-business-acl.cases.mjs",
+    "test:docker": "node --test scripts/docker-stack.cases.mjs scripts/docker-oidc-discovery.cases.mjs scripts/docker-oidc-transport.cases.mjs scripts/docker-runtime-binding.cases.mjs scripts/docker-native-transaction-probe.cases.mjs scripts/docker-db-role-review.cases.mjs scripts/docker-db-role-bootstrap-plan.cases.mjs scripts/docker-db-role-bootstrap.cases.mjs scripts/docker-db-role-isolation.cases.mjs scripts/docker-db-role-isolation-plan.cases.mjs scripts/docker-db-role-object-review.cases.mjs scripts/docker-db-role-business-acl.cases.mjs scripts/docker-db-role-lock-routines.cases.mjs",
     "oidc:lab:identity": "node scripts/oidc-lab-identity.mjs",
     "test:oidc:https:readonly": "node --test scripts/verify-oidc-https-readonly.cases.mjs",
     "test:projects:oidc:config": "node --test scripts/test-project-browser-oidc.cases.mjs",
