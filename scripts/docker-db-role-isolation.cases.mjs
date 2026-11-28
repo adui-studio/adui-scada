@@ -5,7 +5,7 @@ import { readDockerIsolationDirectory } from "./docker-db-role-isolation.mjs";
 function fixture() {
   const db = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1", null].map((name, index) => ({
     oid: String(index + 1), name, ownerOid: "10", allowConnections: index !== 3,
-    template: index === 3 || index === 4, connectionLimit: -1, defaultAcl: index > 1,
+    template: index === 3 || index === 4, connectionLimit: -1, defaultAcl: index > 1, aclEntryCount: 2,
   }));
   const roles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner", null].map((name, index) => ({
     oid: String(index + 10), name, login: index === 0 || index === 4, superuser: index === 0, inherit: index === 0,
@@ -59,6 +59,7 @@ void test("缺失固定对象、重复标识、外部所有者和不完整矩阵
     (rows) => rows[0].shift(),
     (rows) => rows[1].push(rows[1][0]),
     (rows) => { rows[0][0].ownerOid = "999"; },
+    (rows) => rows[2].pop(),
     (rows) => rows[3].pop(),
     (rows) => { rows[3][0] = rows[3][1]; },
     (rows) => { rows[2][0].granteeOid = "999"; },
@@ -90,6 +91,7 @@ void test("未知名称、额外字段和非布尔权限不得进入报告或异
 void test("显式空 ACL 不按默认授权处理，无法归属的会话计入待核查", async () => {
   const rows = fixture();
   rows[2] = rows[2].filter((row) => row.databaseOid !== "1");
+  rows[0][0].aclEntryCount = 0;
   rows[5].push({ databaseOid: null, roleOid: null, total: 3 });
   const report = await readDockerIsolationDirectory(mock(rows).query);
   assert.equal(report.databases[0].defaultAcl, false);

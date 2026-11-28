@@ -414,12 +414,16 @@ async function main() {
             report: currentReport,
             identity,
             storageHash: freshStorageHash,
-            createClient: () => databaseClient(mode === "create" || mode === "rehearse" ? writable : readOnly),
+            createClient: () =>
+              databaseClient(mode === "create" || mode === "rehearse" ? writable : readOnly),
             readDirectory: readDockerBusinessRoleDirectory,
           });
         const result = await execute(bootstrapMode, directoryReport);
         if (bootstrapMode === "isolation-inspect") {
-          requireMatch(isDeepStrictEqual(inspectDocker(true), identity), "全集群核查后本机 Docker 集群发生变化");
+          requireMatch(
+            isDeepStrictEqual(inspectDocker(true), identity),
+            "全集群核查后本机 Docker 集群发生变化",
+          );
           return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
         }
         if (bootstrapMode === "status") {

@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { buildDockerRoleBootstrapPlan } from "./docker-db-role-bootstrap-plan.mjs";
-import { DockerRoleIsolationError, readDockerIsolationDirectory } from "./docker-db-role-isolation.mjs";
+import {
+  DockerRoleIsolationError,
+  readDockerIsolationDirectory,
+} from "./docker-db-role-isolation.mjs";
 
 export class DockerRoleBootstrapError extends Error {}
 
@@ -313,7 +316,9 @@ export async function runDockerRoleBootstrap({
     await verifyPrepared(client, identity, storageHash);
     if (isolationOnly) {
       stage = "全集群权限只读核查";
-      inventory = await readDockerIsolationDirectory((step, sql) => queryPrepared(client, step, sql));
+      inventory = await readDockerIsolationDirectory((step, sql) =>
+        queryPrepared(client, step, sql),
+      );
     }
     stage = "后置事务身份及目录核验";
     requireMatch(
@@ -335,7 +340,10 @@ export async function runDockerRoleBootstrap({
     failure = commitAttempted
       ? "角色事务提交结果未知，禁止重试，请先执行只读状态核查"
       : "角色准备" + stage + "失败，内部诊断已脱敏，保留现场";
-    if (!commitAttempted && (error instanceof RoleVerificationError || error instanceof DockerRoleIsolationError)) {
+    if (
+      !commitAttempted &&
+      (error instanceof RoleVerificationError || error instanceof DockerRoleIsolationError)
+    ) {
       failure += "；" + error.message;
     }
   }
@@ -363,9 +371,9 @@ export async function runDockerRoleBootstrap({
       ? "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY"
       : statusOnly
         ? result.status
-      : committed
-        ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED"
-        : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
+        : committed
+          ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED"
+          : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
     rolesPrepared: statusOnly || committed,
     committed,
     rolledBack: !committed,

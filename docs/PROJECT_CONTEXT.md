@@ -3248,3 +3248,7 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 维护者 Windows 于 `cb45fdaede179f82ec4c7f93e67f0ae9295abc87` 实测：99 份 Markdown 通过；前置状态 rolesPrepared=false，正式创建 committed=true、rolesPrepared=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false，退出 0；独立状态 rolesPrepared=true、退出 0；存储指纹保持一致，OIDC Discovery/JWKS 只读探针、七容器状态及 git diff --check 通过，工作区干净。PR #259 经维护者授权 Squash 合入集成分支 `2278e69b6cce9b163d3d9f0046e1de41bb5a77b8`。PUBLIC CONNECT 保留，正式准入、登录及服务切换未启用。
 
 B3 当前仅进入只读核查与预览设计，实际查询、测试和权限变更尚未实施；见角色准备设计文档。
+
+### 2026-11-28 · PR #260 B3.1 全集群权限只读核查候选
+
+B2 已真实持久化验收并合入 MVP 集成分支。PR #260 新增 `docker:db:role:isolation:inspect`，仅在 B2 严格已准备角色状态下使用既有固定只读事务采集全库、角色、ACL 来源/行数、有效权限、显式成员关系、当前客户端连接聚合；未知名称脱敏，消费者仍需独立确认。模块与独立测试 Node.js 22.16.0 实测 4/4；三项新增事务集成回归、全仓质量检查和真实 PostgreSQL 19 核查待 Windows 验收。未执行数据库授权、写入、登录、服务切换或跨库隔离，B3.2/B3.3 尚未实施。详见 [独立运行角色准备计划](plans/docker-native-role-bootstrap-plan.md)。

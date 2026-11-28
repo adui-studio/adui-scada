@@ -5,7 +5,8 @@ const databaseSql = `SELECT d.oid::text AS oid,
     THEN d.datname::text ELSE NULL END AS name,
   d.datdba::text AS "ownerOid", d.datallowconn AS "allowConnections",
   d.datistemplate AS template, d.datconnlimit AS "connectionLimit",
-  d.datacl IS NULL AS "defaultAcl"
+  d.datacl IS NULL AS "defaultAcl",
+  (SELECT count(*)::int FROM pg_catalog.aclexplode(coalesce(d.datacl, pg_catalog.acldefault('d', d.datdba)))) AS "aclEntryCount"
 FROM pg_catalog.pg_database d ORDER BY d.oid`;
 const roleSql = `SELECT r.oid::text AS oid,
   CASE WHEN r.rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner')
@@ -64,6 +65,7 @@ export async function readDockerIsolationDirectory(query) {
     oid, name: label(databases), ownerOid: oid, allowConnections: bool, template: bool,
     connectionLimit: (value) => Number.isSafeInteger(value) && value >= -2,
     defaultAcl: bool,
+    aclEntryCount: (value) => Number.isSafeInteger(value) && value >= 0,
   });
   const role = await read("全集群角色", roleSql, {
     oid, name: label(roles), login: bool, superuser: bool, inherit: bool,
@@ -80,6 +82,10 @@ export async function readDockerIsolationDirectory(query) {
     privilege: (value) => privileges.includes(value), grantable: bool,
   });
   unique(acl, (row) => JSON.stringify([row.databaseOid, row.grantorOid, row.granteeOid, row.privilege]), "数据库 ACL");
+  requireInventory(
+    db.every((row) => acl.filter((entry) => entry.databaseOid === row.oid).length === row.aclEntryCount),
+    "数据库 ACL 行数",
+  );
   const effective = await read("数据库有效权限", effectiveSql, {
     databaseOid: dbRef, roleOid: roleRef, connect: bool, temporary: bool, create: bool,
   });

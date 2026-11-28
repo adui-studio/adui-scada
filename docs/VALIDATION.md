@@ -5477,3 +5477,7 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 维护者 Windows 于 `cb45fdaede179f82ec4c7f93e67f0ae9295abc87` 实测：99 份 Markdown 通过；前置状态 rolesPrepared=false，正式创建 committed=true、rolesPrepared=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false，退出 0；独立状态 rolesPrepared=true、退出 0；存储指纹保持一致，OIDC Discovery/JWKS 只读探针、七容器状态及 git diff --check 通过，工作区干净。PR #259 经维护者授权 Squash 合入集成分支 `2278e69b6cce9b163d3d9f0046e1de41bb5a77b8`。PUBLIC CONNECT 保留，正式准入、登录及服务切换未启用。
 
 B3 当前仅进入只读核查与预览设计，实际查询、测试和权限变更尚未实施；见角色准备设计文档。
+
+### 2026-11-28 · B3.1 全集群目录只读候选验证
+
+协作环境 Node.js 22.16.0 对 `scripts/docker-db-role-isolation.mjs` 和 `scripts/docker-db-role-isolation.cases.mjs` 运行 node --check，均退出 0；实际 node --test 专项 4/4，退出 0，覆盖六条固定 SELECT、未知及模板数据库、默认与显式空 ACL、遗漏 ACL 行、完整权限矩阵、角色引用、敏感名称/额外字段拒绝、未解析连接数量。最终本地 Git Blob 模块 d9ed5183ce8fcb51427b2eaaeb1c87c38f678b3d、测试 3fddcb2fad9fae0aa8bdd38ca6400a89f25fea69。协作环境无 pnpm、Vite+、PostgreSQL，GitHub 域名解析失败，无法克隆全仓；B2 三项新增集成测试与 CLI/环境门禁、全仓质量链和真实 PG19 未执行，不将模拟当成实际数据库结果。Windows 待验收 Docker 预计 93 项、Prisma 8 全新专项 29 项、env/messages/docs、Vite+ 零警告零错误、git diff --check；再独立运行 B2 状态及 B3.1 只读核查，要求角色准备完成、目录/事务回滚确认及所有变更许可为 false，消费者仍待人工评审。无数据库写入、服务切换、权限回收或 LOGIN 变更。
