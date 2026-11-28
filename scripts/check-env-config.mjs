@@ -324,6 +324,16 @@ assert.ok(
     !packageScripts["docker:up"].includes("role-bootstrap"),
   "真实角色准备事务及状态核查必须独立执行",
 );
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-isolation.cases.mjs"));
+assert.equal(
+  packageScripts["docker:db:role:isolation:inspect"],
+  "node apps/server/prisma8-fresh-install.mjs --role-isolation-inspect",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:isolation:inspect") &&
+    !packageScripts["docker:up"].includes("role-isolation-inspect"),
+  "真实全集群权限核查必须独立执行",
+);
 assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
 assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
 assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));

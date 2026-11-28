@@ -239,6 +239,132 @@ function mock(mode, fault = "") {
 }
 
 void describe("Docker 角色准备事务", () => {
+  void it("全集群清单在角色复核后同一只读事务采集，后置目录一致并确认回滚", async () => {
+    const { options, calls, statements } = mock("status");
+    const client = options.createClient();
+    const originalQuery = client.query.bind(client);
+    const db = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1"].map(
+      (name, index) => ({
+        oid: String(index + 1),
+        name,
+        ownerOid: "10",
+        allowConnections: index !== 3,
+        template: index === 3 || index === 4,
+        connectionLimit: -1,
+        defaultAcl: index > 1,
+        aclEntryCount: index < 2 ? 3 : 2,
+      }),
+    );
+    const roles = ["adui_scada", ...names, "pg_database_owner"].map((name, index) => ({
+      oid: String(index + 10),
+      name,
+      login: index === 0,
+      superuser: index === 0,
+      inherit: index === 0,
+    }));
+    const acl = db.flatMap((row) =>
+      ["CONNECT", "TEMPORARY"].map((privilege) => ({
+        databaseOid: row.oid,
+        grantorOid: "10",
+        granteeOid: "0",
+        privilege,
+        grantable: false,
+      })),
+    );
+    acl.push(
+      {
+        databaseOid: "1",
+        grantorOid: "10",
+        granteeOid: "11",
+        privilege: "CONNECT",
+        grantable: false,
+      },
+      {
+        databaseOid: "2",
+        grantorOid: "10",
+        granteeOid: "12",
+        privilege: "CONNECT",
+        grantable: false,
+      },
+    );
+    const effective = db.flatMap((row) =>
+      roles.map((role) => ({
+        databaseOid: row.oid,
+        roleOid: role.oid,
+        connect: true,
+        temporary: true,
+        create: role.superuser,
+      })),
+    );
+    const inventoryRows = [
+      db,
+      roles,
+      acl,
+      effective,
+      [],
+      [{ databaseOid: "1", roleOid: "10", total: 1 }],
+    ];
+    let index = 0;
+    client.query = async (sql, values) => {
+      if (
+        sql.startsWith("SELECT d.oid::text") ||
+        sql.startsWith("SELECT r.oid::text") ||
+        sql.startsWith("SELECT m.roleid::text") ||
+        sql.startsWith("SELECT a.datid::text")
+      ) {
+        calls.push(sql);
+        return { rows: inventoryRows[index++] };
+      }
+      return originalQuery(sql, values);
+    };
+    const result = await runDockerRoleBootstrap({
+      ...options,
+      mode: "isolation-inspect",
+      createClient: () => client,
+    });
+    assert.equal(result.status, "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY");
+    assert.equal(result.rolesPrepared, true);
+    assert.equal(result.rolledBack, true);
+    assert.equal(result.databaseWritten, false);
+    assert.equal(result.catalogStatementsExecuted, false);
+    assert.equal(result.admissionPassed, false);
+    assert.equal(result.serviceSwitched, false);
+    assert.equal(result.inventory.effective.length, 20);
+    assert.equal(result.inventory.changeAllowed, false);
+    assert.equal(index, 6);
+    assert.ok(
+      calls.indexOf("SET LOCAL ROLE NONE") <
+        calls.findIndex((sql) => sql.startsWith("SELECT d.oid::text")),
+    );
+    assert.equal(
+      calls.some((sql) => statements.includes(sql)),
+      false,
+    );
+    assert.equal(calls.includes("COMMIT"), false);
+    assert.deepEqual(calls.slice(-3), ["目录核验", "ROLLBACK", "关闭"]);
+  });
+  void it("全集群核查缺少持久化角色时不构造连接", async () => {
+    const { options, calls } = mock("rehearse");
+    await assert.rejects(
+      runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }),
+      /证据不一致/u,
+    );
+    assert.deepEqual(calls, []);
+  });
+  void it("全集群目录查询失败时只读事务确认回滚并关闭连接", async () => {
+    const { options, calls, statements } = mock("status");
+    await assert.rejects(
+      runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }),
+      /全集群数据库查询失败（SQLSTATE=UNKNOWN）.*事务已确认回滚/u,
+    );
+    assert.ok(calls.includes("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"));
+    assert.equal(
+      calls.some((sql) => statements.includes(sql)),
+      false,
+    );
+    assert.equal(calls.includes("COMMIT"), false);
+    assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+  });
   void it("演练按固定顺序执行八条语句并回滚，不提交或切换服务", async () => {
     const { options, calls, statements } = mock("rehearse");
     const result = await runDockerRoleBootstrap(options);

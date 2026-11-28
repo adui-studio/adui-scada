@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { buildDockerRoleBootstrapPlan } from "./docker-db-role-bootstrap-plan.mjs";
+import {
+  DockerRoleIsolationError,
+  readDockerIsolationDirectory,
+} from "./docker-db-role-isolation.mjs";
 
 export class DockerRoleBootstrapError extends Error {}
 
@@ -238,17 +242,19 @@ export async function runDockerRoleBootstrap({
   identity,
   storageHash,
 }) {
-  requireMatch(["rehearse", "create", "status"].includes(mode));
+  requireMatch(["rehearse", "create", "status", "isolation-inspect"].includes(mode));
   requireMatch(
     identity?.version === "190000" &&
       typeof identity.systemIdentifier === "string" &&
       /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
   );
-  const statusOnly = mode === "status";
+  const isolationOnly = mode === "isolation-inspect";
+  const statusOnly = mode === "status" || isolationOnly;
   const prepared =
     statusOnly &&
     report?.role?.scadaRuntimeExists === true &&
     report.role.keycloakRuntimeExists === true;
+  requireMatch(!isolationOnly || prepared);
   const baseline = prepared
     ? {
         ...report,
@@ -272,6 +278,7 @@ export async function runDockerRoleBootstrap({
   if (statusOnly && !prepared) return result;
   let client;
   let begun = false;
+  let inventory;
   let commitAttempted = false;
   let committed = false;
   let stage = "连接";
@@ -307,6 +314,12 @@ export async function runDockerRoleBootstrap({
     }
     stage = "角色属性、精确授权及有效权限核验";
     await verifyPrepared(client, identity, storageHash);
+    if (isolationOnly) {
+      stage = "全集群权限只读核查";
+      inventory = await readDockerIsolationDirectory((step, sql) =>
+        queryPrepared(client, step, sql),
+      );
+    }
     stage = "后置事务身份及目录核验";
     requireMatch(
       isDeepStrictEqual(
@@ -327,7 +340,10 @@ export async function runDockerRoleBootstrap({
     failure = commitAttempted
       ? "角色事务提交结果未知，禁止重试，请先执行只读状态核查"
       : "角色准备" + stage + "失败，内部诊断已脱敏，保留现场";
-    if (!commitAttempted && error instanceof RoleVerificationError) {
+    if (
+      !commitAttempted &&
+      (error instanceof RoleVerificationError || error instanceof DockerRoleIsolationError)
+    ) {
       failure += "；" + error.message;
     }
   }
@@ -350,11 +366,14 @@ export async function runDockerRoleBootstrap({
   if (failure) throw new DockerRoleBootstrapError(failure);
   return {
     ...result,
-    status: statusOnly
-      ? result.status
-      : committed
-        ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED"
-        : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
+    ...(isolationOnly ? { inventory } : {}),
+    status: isolationOnly
+      ? "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY"
+      : statusOnly
+        ? result.status
+        : committed
+          ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED"
+          : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
     rolesPrepared: statusOnly || committed,
     committed,
     rolledBack: !committed,

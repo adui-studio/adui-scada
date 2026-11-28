@@ -102,3 +102,25 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 维护者 2026-11-28 Windows 于 HEAD b67c230a140d79664620962805fecffd2e18c1be 实测：演练前独立角色状态核查退出 0、rolesPrepared=false；Docker 九套件 86/86（角色事务 11/11）、Prisma 8 全新专项 29/29，合计 115/115；环境及 LF、中文文案 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告、Lint 和类型错误、git diff --check 均通过，退出 0，工作区干净。随后真实 PostgreSQL 19.0 回滚演练返回 DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED、catalogStatementsExecuted=true、rolledBack=true、committed=false、rolesPrepared=false、directoryReviewPassed=true、postVerificationPassed=true、admissionPassed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、publicConnectRetained=true，退出 0；演练后独立状态核查返回 DOCKER_DB_ROLE_BOOTSTRAP_STATUS_READY、rolesPrepared=false，退出 0。存储指纹始终为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436。E-167 对象类型保护修复通过真实完整演练，关闭；无需再次改动已验收 SQL。
 
 下一步为维护者独立执行正式创建验收，先同步仅追加文档的候选、检查工作区干净、文档检查及只读状态，确认 rolesPrepared=false、退出 0；确认本机固定 Docker 集群及无并发数据库权限维护后，使用已存在的精确确认命令 `pnpm run docker:db:role:bootstrap --confirm-create-docker-roles`。该命令会持久化两个 NOLOGIN、无密码、无管理权限角色及原八条固定语句对应的十项直接 ACL，不修改现有角色、业务行、PUBLIC CONNECT、Compose、服务凭据、OIDC 或发布门禁。只有返回 DOCKER_DB_ROLE_BOOTSTRAP_CREATED、rolesPrepared=true、committed=true、rolledBack=false、catalogStatementsExecuted=true、directoryReviewPassed=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false、admissionPassed=false、serviceSwitched=false、publicConnectRetained=true、退出 0，并独立状态核查 rolesPrepared=true、原生指纹不变及既有 OIDC 只读和七服务状态回归通过，才完成 B2 持久化验收。无论创建结果如何都独立核查状态；失败或提交结果未知时禁止重试、手动删除或调整授权，保留现场。当前协作环境仅同步文档，不操作维护者数据库；未重新执行新增文档后的全仓检查。PR #259 保持 Draft 至真实持久化验收及维护者明确合并授权。B3 全集群 PUBLIC/跨库隔离及 B4 正式业务 ACL、Keycloak 所有权均不提前实施。
+
+### 2026-11-28 · B2 正式角色持久化验收完成
+
+维护者 Windows 于 `cb45fdaede179f82ec4c7f93e67f0ae9295abc87` 实测：99 份 Markdown 通过；前置状态 rolesPrepared=false，正式创建 committed=true、rolesPrepared=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false，退出 0；独立状态 rolesPrepared=true、退出 0；存储指纹保持一致，OIDC Discovery/JWKS 只读探针、七容器状态及 git diff --check 通过，工作区干净。PR #259 经维护者授权 Squash 合入集成分支 `2278e69b6cce9b163d3d9f0046e1de41bb5a77b8`。PUBLIC CONNECT 保留，正式准入、登录及服务切换未启用。
+
+## 10. B3 全集群 PUBLIC 权限与跨库隔离设计门禁
+
+先实现只读清单及变更预览，不执行 REVOKE。清点 pg_database 全部数据库（含模板及禁止连接项），记录允许连接标记、所有者、连接限制、显式或默认 ACL 来源及 PUBLIC CONNECT/TEMP/CREATE；分别核对两个候选角色与现有服务身份的有效 CONNECT/TEMP/CREATE，以及角色成员关系、所有权和授权路径。不可连接数据库不得被静默遗漏。目录可连接资格不等于真实网络登录成功。
+
+预览须识别每个受影响的现有消费者、连接池、维护任务及未知角色；未知消费者或权限漂移阻塞变更。不得通过对单个角色 REVOKE 抵消 PUBLIC 授权。不得盲目回收模板库或维护库权限，不授予额外业务对象权限。后续执行器需独立确认、固定 SQL 白名单、事务内前后验证和回滚演练；确保现有服务直接连接权限不被误撤销。正式提交需维护者另行授权。禁止切换服务身份、启用 LOGIN、修改密码、业务数据、Keycloak 所有权或正式准入。B2 既有核查中 PUBLIC 保留的基线条件须在 B3 执行器设计时明确区分变更前后状态，不得简单删除断言。
+
+验收分为只读目录完整性、预览差异及未知消费者阻断、真实事务回滚、独立持久化状态核查和现有服务回归；实际连接拒绝验证留待独立登录阶段，不能用 NOLOGIN 角色的有效权限查询冒充真实连接测试。本提交仅为设计和验收记录，未实现或运行 B3 查询、测试或数据库变更。
+
+## 11. B3.1 全集群数据库权限只读核查候选（PR #260）
+
+新增独立命令 `pnpm run docker:db:role:isolation:inspect`。仅使用已持久化的 B2 角色和既有固定本机 Docker 连接边界；先执行官方严格结构与标记验证、中文注释和双库现状复核，再在 B2 的 REPEATABLE READ READ ONLY 事务内精确验证已准备角色、直接 ACL、有效对象与列权限和固定读取探针，恢复管理身份后采集全集群目录，后置业务目录一致、确认 ROLLBACK 和连接关闭，再核对本机 Docker 集群身份。角色缺失、目录不一致、查询/回滚/关闭异常均拒绝成功，不自动重试。既有 B2 创建与回滚演练 SQL 不变。
+
+核查包含六条固定 SELECT：全部 pg_database 行（含模板、禁止连接和额外数据库、所有者、连接限制、ACL 来源与行数）；全部 pg_roles 行；aclexplode 展开的数据库 ACL（datacl 为 NULL 才使用 acldefault，显式空 ACL 保持空）；所有数据库与所有角色的 CONNECT/TEMPORARY/CREATE 有效权限矩阵；全部显式角色成员关系及 ADMIN/INHERIT/SET 选项；pg_stat_activity 当前客户端连接按库和角色聚合的数量。检查固定名称、OID 唯一性和引用完整性、每库 ACL 行数及全矩阵覆盖。仅允许固定的数据库/角色名称进入输出，未知名称为 null 并保留当前集群 OID，禁止回显查询正文、客户端地址、应用名称、凭据或原始异常。SQL 采用 PostgreSQL 19 官方访问权限查询与 ACL 函数及目录定义：[权限查询函数](https://www.postgresql.org/docs/19/functions-info.html)、[角色成员关系](https://www.postgresql.org/docs/19/catalog-pg-auth-members.html)。
+
+输出 status=DOCKER_DB_ROLE_ISOLATION_INSPECT_READY、rolesPrepared=true、rolledBack=true、committed=false、catalogStatementsExecuted=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、directoryReviewPassed=true；inventory 包含 databases、roles、acl、effective、memberships、sessions、unknownLoginRoleCount、unknownDatabaseCount、unresolvedSessionCount 及 consumerReviewRequired=true、changeAllowed=false、isolationPassed=false。现有共享管理角色下的连接无法区分 SCADA、Keycloak、连接池、工具或其他消费者，且瞬时连接统计包含核查自身、不涵盖未连接的服务和未来维护任务；有效权限并不证明真实网络连接、登录或认证成功，pg_database_owner 的隐式当前库所有者语义亦不能用显式成员清单代替。未知库、角色和会话需人工核对用途，不输出原始名称；即使未知计数为零，也必须独立确认消费者，不能自动回收 PUBLIC 权限。本轮只采集目录与统计，不生成变更 SQL，不执行 REVOKE、GRANT、ALTER ROLE、业务 DML 或服务切换；未进入 B3.2 预览和 B3.3 执行器。
+
+增量验收：协作环境 Node.js 22.16.0 对新增隔离目录模块及独立测试执行 node --check、node --test，4/4 通过。最终本地 Git Blob 模块 d9ed5183ce8fcb51427b2eaaeb1c87c38f678b3d、测试 3fddcb2fad9fae0aa8bdd38ca6400a89f25fea69。另新增三项 B2 事务集成回归与 CLI 白名单断言，预计 Docker 93 项、Prisma 8 全新专项 29 项；这些及全仓 Vite+、环境、中文文案、文档检查和真实 PostgreSQL 19 查询尚待维护者 Windows 验收。执行 `pnpm run test:docker`、`pnpm run test:prisma8:fresh`、`pnpm run env:check`、`pnpm run messages:check`、`pnpm run docs:check`、`vp check --fix`、`vp check`、`git diff --check`，再独立执行 B2 状态核查及 B3.1 只读核查。任何失败保留现场，不运行正式角色创建或权限变更。不需要重建镜像、停止服务或初始化数据库。
