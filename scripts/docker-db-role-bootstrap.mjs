@@ -30,6 +30,7 @@ const aclSql = `WITH candidates AS (${candidateSql}), entries AS (
     FROM pg_catalog.pg_proc p CROSS JOIN LATERAL pg_catalog.aclexplode(p.proacl) a
 ) SELECT r.rolname::text AS role, e.kind, e.object, e.privilege_type AS privilege, e.is_grantable AS grantable
 FROM entries e JOIN candidates r ON r.oid = e.grantee`;
+// 混合关系目录必须使用 CASE 保护对象类型专用权限函数，不能依赖 AND 的求值顺序。
 const effectiveSql = `WITH candidates AS (${candidateSql}), relations AS (
   SELECT c.oid, c.relkind FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname IN ('public', 'prisma_contract')
@@ -37,10 +38,11 @@ const effectiveSql = `WITH candidates AS (${candidateSql}), relations AS (
 SELECT r.rolname::text AS role,
   NOT EXISTS (SELECT 1 FROM pg_catalog.pg_database d WHERE pg_catalog.has_database_privilege(r.oid, d.oid, 'CREATE')) AS "noDatabaseCreate",
   NOT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname IN ('public', 'prisma_contract') AND pg_catalog.has_schema_privilege(r.oid, n.oid, 'CREATE')) AS "noSchemaCreate",
-  NOT EXISTS (SELECT 1 FROM relations c WHERE c.relkind IN ('r','p','v','m','f') AND (
+  NOT EXISTS (SELECT 1 FROM relations c WHERE CASE WHEN c.relkind IN ('r','p','v','m','f') THEN (
     pg_catalog.has_table_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER,MAINTAIN') OR
-    pg_catalog.has_any_column_privilege(r.oid, c.oid, 'INSERT,UPDATE,REFERENCES'))) AS "noTableOrColumnWrites",
-  NOT EXISTS (SELECT 1 FROM relations c WHERE c.relkind = 'S' AND pg_catalog.has_sequence_privilege(r.oid, c.oid, 'USAGE,SELECT,UPDATE')) AS "noSequencePrivileges",
+    pg_catalog.has_any_column_privilege(r.oid, c.oid, 'INSERT,UPDATE,REFERENCES')) ELSE false END) AS "noTableOrColumnWrites",
+  NOT EXISTS (SELECT 1 FROM relations c WHERE CASE WHEN c.relkind = 'S' THEN
+    pg_catalog.has_sequence_privilege(r.oid, c.oid, 'USAGE,SELECT,UPDATE') ELSE false END) AS "noSequencePrivileges",
   pg_catalog.has_database_privilege(r.oid, 'adui_scada', 'CONNECT') AS "businessConnect",
   pg_catalog.has_database_privilege(r.oid, 'adui_scada_keycloak', 'CONNECT') AS "keycloakConnect"
 FROM candidates r`;
@@ -48,8 +50,8 @@ const effectiveColumnsSql = `WITH candidates AS (${candidateSql})
 SELECT r.rolname::text AS role, pg_catalog.format('%I.%I.%I', n.nspname, c.relname, a.attname) AS object
 FROM candidates r CROSS JOIN pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-WHERE n.nspname IN ('public', 'prisma_contract') AND c.relkind IN ('r','p','v','m','f')
-  AND pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT')`;
+WHERE n.nspname IN ('public', 'prisma_contract') AND CASE WHEN c.relkind IN ('r','p','v','m','f') THEN
+  pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT') ELSE false END`;
 const lockedSql =
   "SELECT pg_catalog.pg_try_advisory_xact_lock(839572941652::bigint) AS locked, current_setting('transaction_isolation') AS isolation";
 const probeSql = `SELECT current_user::text AS role, session_user::text AS "sessionRole", current_database() AS database,
