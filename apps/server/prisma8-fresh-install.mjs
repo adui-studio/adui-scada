@@ -352,7 +352,9 @@ async function main() {
         ? "create"
         : action === "role-bootstrap-status"
           ? "status"
-          : null;
+          : action === "role-isolation-inspect"
+            ? "isolation-inspect"
+            : null;
   const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
@@ -412,10 +414,14 @@ async function main() {
             report: currentReport,
             identity,
             storageHash: freshStorageHash,
-            createClient: () => databaseClient(mode === "status" ? readOnly : writable),
+            createClient: () => databaseClient(mode === "create" || mode === "rehearse" ? writable : readOnly),
             readDirectory: readDockerBusinessRoleDirectory,
           });
         const result = await execute(bootstrapMode, directoryReport);
+        if (bootstrapMode === "isolation-inspect") {
+          requireMatch(isDeepStrictEqual(inspectDocker(true), identity), "全集群核查后本机 Docker 集群发生变化");
+          return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
+        }
         if (bootstrapMode === "status") {
           return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
         }

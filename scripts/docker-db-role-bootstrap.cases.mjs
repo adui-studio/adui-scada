@@ -239,6 +239,22 @@ function mock(mode, fault = "") {
 }
 
 void describe("Docker 角色准备事务", () => {
+  void it("全集群核查缺少持久化角色时不构造连接", async () => {
+    const { options, calls } = mock("rehearse");
+    await assert.rejects(runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }), /证据不一致/u);
+    assert.deepEqual(calls, []);
+  });
+  void it("全集群目录查询失败时只读事务确认回滚并关闭连接", async () => {
+    const { options, calls, statements } = mock("status");
+    await assert.rejects(
+      runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }),
+      /全集群数据库查询失败（SQLSTATE=UNKNOWN）.*事务已确认回滚/u,
+    );
+    assert.ok(calls.includes("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"));
+    assert.equal(calls.some((sql) => statements.includes(sql)), false);
+    assert.equal(calls.includes("COMMIT"), false);
+    assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+  });
   void it("演练按固定顺序执行八条语句并回滚，不提交或切换服务", async () => {
     const { options, calls, statements } = mock("rehearse");
     const result = await runDockerRoleBootstrap(options);
